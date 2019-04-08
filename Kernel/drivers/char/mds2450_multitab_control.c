@@ -54,14 +54,14 @@ static void multitab_control_timer_handler(unsigned long data)
 	for(i = 0; i < multitab_count; i++){
 		if(multitab_array[i]){
 			gpio_set_value(S3C2410_GPG(1 + i), 1);		// RELAY 
-			gpio_set_value(S3C2410_GPG(4 + i), 0);		// LED
+			gpio_set_value(S3C2410_GPG(4 + i), 0);		// BOARD LED
 
 			if(multitab_array_old[i] != multitab_array[i])
 				printk("Multitab %d ON\n", i);
 		}
 		else{
 			gpio_set_value(S3C2410_GPG(1 + i), 0);		// RELAY 
-			gpio_set_value(S3C2410_GPG(4 + i), 1);		// LED
+			gpio_set_value(S3C2410_GPG(4 + i), 1);		// BOARD LED
 
 			if(multitab_array_old[i] != multitab_array[i])
 				printk("Multitab %d OFF\n", i);
