@@ -12,7 +12,7 @@
 
 변경 후 우분투 가상머신의 네트워크 인터페이스 (Bridged로 연결한 네트워크 어댑터를 사용한다)
 
-![](Untitled-c398e925-d0b8-4d9c-8fc8-484ee5764f47.png)
+![](./Image/Untitled-c398e925-d0b8-4d9c-8fc8-484ee5764f47.png)
 
 ### U-Boot 설정 변경
 
