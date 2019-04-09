@@ -33,6 +33,8 @@ public class MainActivity extends AppCompatActivity implements Runnable {
 
     Thread t = new Thread(this);
 
+    String ACK;
+
     Button btn;
     Button btn2;
 
@@ -93,7 +95,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                         btn.setText("LED0 ON");
                     }
                     output.flush();
-                    btn_on = !btn_on;
+//                    btn_on = !btn_on;
                     Log.d("TEST", "Socket Sended!!");
                 }catch (Exception e){
                     Toast.makeText(getApplicationContext(), "문자열 전송 실패", Toast.LENGTH_SHORT).show();
@@ -113,7 +115,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                         btn2.setText("LED1 ON");
                     }
                     output.flush();
-                    btn2_on = !btn2_on;
+//                    btn2_on = !btn2_on;
                     Log.d("TEST", "Socket Sended!!");
                 }catch (Exception e){
                     Toast.makeText(getApplicationContext(), "문자열 전송 실패", Toast.LENGTH_SHORT).show();
@@ -133,6 +135,31 @@ public class MainActivity extends AppCompatActivity implements Runnable {
 
         }catch (Exception e) {
             Toast.makeText(this, "서버 연결 실패", Toast.LENGTH_LONG).show();
+        }
+        while(true){
+            try {
+                ACK = input.readLine();
+                switch (ACK) {
+                    case "c00":
+                        btn.setText("LED0 ON");
+                        btn_on = false;
+                        break;
+                    case "c01":
+                        btn.setText("LED0 OFF");
+                        btn_on = true;
+                        break;
+                    case "c10":
+                        btn2.setText("LED1 ON");
+                        btn2_on = false;
+                        break;
+                    case "c11":
+                        btn2.setText("LED1 OFF");
+                        btn2_on = true;
+                        break;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
