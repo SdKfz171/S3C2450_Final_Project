@@ -117,6 +117,12 @@ int   main (int argc, char **argv)
 				}
 				else if(!strcmp(bufmsg, "START\n")){
 					printf("APP STARTED!!\n");
+
+					while (!IsEmpty(&q))
+						Dequeue(&q);
+					
+					printf("QUEUE CLEARED!!\n");
+
 					dir = opendir("./Playlist");
 					if(dir != NULL){
 						while((ent = readdir(dir)) != NULL){
