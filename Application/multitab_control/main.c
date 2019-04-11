@@ -151,6 +151,7 @@ int   main (int argc, char **argv)
 
 						printf("\t\t%s\n", Peek(&q));
 						Enqueue(&q, Dequeue(&q));
+						free(list_buffer);
 					}
 				}
 				else if(strstr(bufmsg, "PLAY") - bufmsg == 0 && strlen(bufmsg) == 6){
@@ -164,6 +165,7 @@ int   main (int argc, char **argv)
 							file_name = (char *)malloc(strlen(Peek(&q) + 6 + 9));
 							sprintf(file_name, "aplay Playlist/%s", Peek(&q));
 							system(file_name);
+							free(file_name);
 						}
 						Enqueue(&q, Dequeue(&q));
 					} 
