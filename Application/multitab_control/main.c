@@ -121,6 +121,8 @@ int   main (int argc, char **argv)
 					if(dir != NULL){
 						while((ent = readdir(dir)) != NULL){
 							if(strstr(ent->d_name, ".wav") - ent->d_name == strlen(ent->d_name) - 4){
+								if(ent->d_name[strlen(ent->d_name) - 1] == 0x0A)
+									ent->d_name[strlen(ent->d_name) - 1] = 0x00;
 								Enqueue(&q, ent->d_name);
 								printf("Equeue : %s\n", ent->d_name);	
 							}
@@ -132,9 +134,15 @@ int   main (int argc, char **argv)
 				}
 				else if(!strcmp(bufmsg, "LIST\n")){
 					int index = 0;
-
+					char * list_buffer;
+					
 					printf("Music List : \n");
 					for(; index < q.size; index++){
+						list_buffer = (char *)malloc(strlen(Peek(&q)) +  1);
+						sprintf(list_buffer,"%s\n", Peek(&q));
+						if (send(s, list_buffer, strlen(list_buffer), 0) < 0)
+							puts("Error : Write error on socket.");
+
 						printf("\t\t%s\n", Peek(&q));
 						Enqueue(&q, Dequeue(&q));
 					}
