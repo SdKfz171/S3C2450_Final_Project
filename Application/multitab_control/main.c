@@ -28,6 +28,9 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 #include <time.h>
+#include <dirent.h>
+
+#include "queue.h"
 
 #define MDS2450_MULTITAB_CONTROL_MAJOR 71
 
@@ -42,10 +45,14 @@ void errquit(char *mesg) { perror(mesg); exit(1); }
 
 int   main (int argc, char **argv)
 {
+	Queue q;
+
     int dev_fd;
     char dev_path[32];
 	int key;
 	int ret;
+	DIR * dir;
+	struct dirent * ent;
 	
 	// Socket Code
     char bufname[NAME_LEN];	// 이름
@@ -59,6 +66,8 @@ int   main (int argc, char **argv)
 	struct tm tm;
 	char command[2];
 	char index = -1;
+
+	QueueInit(&q);
 
 	if (argc != 3) {
 		printf("사용법 : %s sever_ip name \n", argv[0]);
@@ -95,16 +104,55 @@ int   main (int argc, char **argv)
 				printf("%s\r\n", bufmsg);		//메시지 출력
 				fprintf(stderr, "\033[1;32m");	//글자색을 녹색으로 변경
 				fprintf(stderr, "%s>", argv[2]);//내 닉네임 출력
+				
 				if(strchr(bufmsg, 'C') != NULL){
 					index = strchr(bufmsg, 'C') - bufmsg;
 					// printf("%d : %d\n", index, strlen(bufmsg));
+					if(!index && strlen(bufmsg) == 4){
+						command[0] = bufmsg[1];
+		   				command[1] = bufmsg[2];
+		   				write(dev_fd, command, 2);
+		   				//printf("Write Success\n");
+					}
 				}
+				else if(!strcmp(bufmsg, "START\n")){
+					printf("APP STARTED!!\n");
+					dir = opendir("./Playlist");
+					if(dir != NULL){
+						while((ent = readdir(dir)) != NULL){
+							if(strstr(ent->d_name, ".wav") - ent->d_name == strlen(ent->d_name) - 4){
+								Enqueue(&q, ent->d_name);
+								printf("Equeue : %s\n", ent->d_name);	
+							}
+						}
+						closedir(dir);
+					} else {
+						printf("%s\n", "Can't Open Directory!!");
+					}
+				}
+				else if(!strcmp(bufmsg, "LIST\n")){
+					int index = 0;
 
-				if(!index && strlen(bufmsg) == 4){
-					command[0] = bufmsg[1];
-	   				command[1] = bufmsg[2];
-	   				write(dev_fd, command, 2);
-	   				//printf("Write Success\n");
+					printf("Music List : \n");
+					for(; index < q.size; index++){
+						printf("\t\t%s\n", Peek(&q));
+						Enqueue(&q, Dequeue(&q));
+					}
+				}
+				else if(strstr(bufmsg, "PLAY") - bufmsg == 0 && strlen(bufmsg) == 6){
+					int index = 0;
+					int music_index = bufmsg[4] - 0x30;
+					char * file_name;
+
+					for(; index < q.size; index++){
+						if(index == music_index){
+							printf("PLAY : %s\n", Peek(&q));
+							file_name = (char *)malloc(strlen(Peek(&q) + 6 + 9));
+							sprintf(file_name, "aplay Playlist/%s", Peek(&q));
+							system(file_name);
+						}
+						Enqueue(&q, Dequeue(&q));
+					} 
 				}
 			}
 		}
