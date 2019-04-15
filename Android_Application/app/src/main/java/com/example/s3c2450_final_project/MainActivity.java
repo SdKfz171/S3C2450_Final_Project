@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.os.Handler;
+import android.support.v7.widget.LinearLayoutCompat;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -26,8 +27,10 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import static android.os.StrictMode.setThreadPolicy;
@@ -53,6 +56,10 @@ public class MainActivity extends AppCompatActivity implements Runnable {
 
     boolean btn_on;
     boolean btn2_on;
+
+    View BottomBar_Divider;
+    LinearLayout BottomBar;
+    TextView Music_Name;
 
     @Override
     protected void onStop() {
@@ -90,6 +97,10 @@ public class MainActivity extends AppCompatActivity implements Runnable {
 
         t.start();
 
+        BottomBar_Divider = (View)findViewById(R.id.divider);
+        BottomBar = (LinearLayout)findViewById(R.id.Music_Bar);
+        Music_Name = (TextView)findViewById(R.id.Now_Playing_Music);
+
         musics = new ArrayList<String>();
 
         listView = (ListView) findViewById(R.id.Music_List);
@@ -100,11 +111,16 @@ public class MainActivity extends AppCompatActivity implements Runnable {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 try{
                     int selected_index = position;
+                    String selected_music = (String) parent.getItemAtPosition(position);
 
                     output.println("PLAY" + position);
                     output.flush();
 
                     Log.d("SOCKET", "Play Position " + selected_index);
+
+                    BottomBar_Divider.setVisibility(View.VISIBLE);
+                    Music_Name.setText(selected_music);
+                    BottomBar.setVisibility(View.VISIBLE);
                 }
                 catch (Exception e){
                     Log.d("SOCKET", "Failed Position is " + position);
@@ -157,6 +173,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                 }
             }
         });
+
 
     }
 
