@@ -54,7 +54,6 @@ public class MainActivity extends AppCompatActivity implements Runnable {
     Button btn;
     Button btn2;
 
-
     boolean btn_on;
     boolean btn2_on;
 
@@ -174,7 +173,8 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                 }
             }
         });
-    
+
+
     }
 
     @Override
