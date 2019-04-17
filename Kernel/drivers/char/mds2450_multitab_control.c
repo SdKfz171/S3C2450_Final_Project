@@ -141,7 +141,7 @@ static void mds2450_multitab_control_release(struct inode * inode, struct file *
 	del_timer_sync(&multitab_control_timer);			// 타이머 핸들러 해제
 }
 
-// 현재 디바이스 드라이버의 파일 오퍼레이션
+// 현재 디바이스 드라이버의 파일 오퍼레이션 구조체
 static struct file_operations mds2450_multitab_control_fops = {
 	.owner 	= THIS_MODULE,
 	.open 	= mds2450_multitab_control_open,
@@ -167,7 +167,7 @@ static int __devexit mds2450_multitab_control_remove(struct platform_device *pde
 	return 0;
 }
 
-// 플랫폼 디바이스 드라이버 관련 초기화 함수
+// 플랫폼 디바이스 드라이버 관련 구조체
 static struct platform_driver mds2450_multitab_control_device_driver = {
 	.probe      = mds2450_multitab_control_probe,
 	.remove     = __devexit_p(mds2450_multitab_control_remove),
@@ -177,11 +177,13 @@ static struct platform_driver mds2450_multitab_control_device_driver = {
 	}
 };
 
+// 모듈 초기화 코드 
 static int __init mds2450_multitab_control_init(void)
 {
  	return platform_driver_register(&mds2450_multitab_control_device_driver);
 }
 
+// 모듈 해제 코드
 static void __exit mds2450_multitab_control_exit(void)
 {
 	platform_driver_unregister(&mds2450_multitab_control_device_driver);

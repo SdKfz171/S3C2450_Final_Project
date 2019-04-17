@@ -78,6 +78,91 @@ NFS 설정을 바꾸고 난 뒤에 기존에 파일시스템이 뻗는 일이 �
 
 #### 캐릭터 디바이스 드라이버 작성
 
+module_init(), module_exit()
+
+모듈의 코드는 위의 부분에서 시작하고 끝난다.
+
+그러므로 위의 로직을 먼저 구현 해주어야 한다. 인자는 함수 포인터이다.
+
+```c
+// 모듈 초기화 코드 
+static int __init mds2450_multitab_control_init(void)
+{
+ 	return platform_driver_register(&mds2450_multitab_control_device_driver);
+}
+
+// 모듈 해제 코드
+static void __exit mds2450_multitab_control_exit(void)
+{
+	platform_driver_unregister(&mds2450_multitab_control_device_driver);
+}
+```
+
+그 다음에 이 캐릭터 디바이스 드라이버를 플랫폼 디바이스 드라이버로 활용 할 것이기 떄문에 해당 구조체를 만들어준다.
+```c
+// 플랫폼 디바이스 드라이버 관련 구조체
+static struct platform_driver mds2450_multitab_control_device_driver = {
+	.probe      = mds2450_multitab_control_probe,
+	.remove     = __devexit_p(mds2450_multitab_control_remove),
+	.driver     = {
+		.name   = "mds2450-multitab_control",
+		.owner  = THIS_MODULE,
+	}
+};
+```
+
+플랫폼 디바이스 드라이버에서는 init과 exit과 같은 역할을 probe와 remove가 한다.
+
+probe에서는 캐릭터 디바이스 드라이버를 등록하고 remove에서는 해제해주는 코드를 작성한다.
+
+```c
+// 캐릭터 디바이스 드라이버 관련 초기화 함수
+static int __devinit mds2450_multitab_control_probe(struct platform_device *pdev)
+{
+	int ret;
+
+	ret = register_chrdev( MDS2450_MULTITAB_CONTROL_MAJOR, multitab_control_name, &mds2450_multitab_control_fops );
+
+    return ret;
+}
+
+static int __devexit mds2450_multitab_control_remove(struct platform_device *pdev)
+{
+	unregister_chrdev( MDS2450_MULTITAB_CONTROL_MAJOR, multitab_control_name );
+
+	return 0;
+}
+```
+
+여기서 중요한 것은 register_chrdev함수의 인자인 메이져 넘버와 파일 오퍼레이션 구조체이다.
+
+모든 디바이스 드라이버 파일에는 메이저 넘버와 마이너 넘버가 존재한다.
+
+```c
+#define MDS2450_MULTITAB_CONTROL_MAJOR 71
+```
+
+메이저 넘버는 제어하려는 디바이스를 구분하기위한 ID이다. 당연하겠지만 각각의 디바이스 드라이버마다 메이저 넘버가 달라야 한다.
+
+마이너 넘버는 해당 디바이스 내부에서 더 상세한 실제 디바이스를 구분 하기 위한 ID이다. 예를 들면 시리얼에서 USART0과 USART1을 구분 하는 것과 같다.  
+
+```c
+// 현재 디바이스 드라이버의 파일 오퍼레이션 구조체
+static struct file_operations mds2450_multitab_control_fops = {
+	.owner 	= THIS_MODULE,
+	.open 	= mds2450_multitab_control_open,
+	.release= mds2450_multitab_control_release,
+	.write 	= mds2450_multitab_control_write,
+	.read 	= mds2450_multitab_control_read,
+};
+```
+
+다음으로 파일 오퍼레이션 구조체은 간단하게 우리가 파일 디스크립터를 열 때 사용하는 open, close, write, read 등의 함수들을 
+
+내 입맛에 맞게 정의하여 사용할 수 있게 해주는 구조체이다. 
+
+
+
 #### 플랫폼 디바이스 드라이버 수정
 
 
