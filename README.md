@@ -161,7 +161,93 @@ static struct file_operations mds2450_multitab_control_fops = {
 
 내 입맛에 맞게 정의하여 사용할 수 있게 해주는 구조체이다. 
 
+open과 같이 사용 할 때 사용자가 정의한 open함수에 연결하기 위해서 사용자 정의 함수의 함수 포인터를 이용한다.
 
+```c
+// 파일 오퍼레이션 write 함수
+static ssize_t mds2450_multitab_control_write(struct file * filp, const char * buf, size_t count, loff_t * pos){
+    char * data;										// 유저에게서 받은 값을 저장 할 버퍼
+    data = kmalloc(count, GFP_KERNEL);					// 버퍼에 동적 할당 
+
+    copy_from_user(data, buf, count);					// 유저로 부터 값 복사
+    printk("%s\n", data);
+    
+	multitab_array[data[0] - '0'] = data[1] - '0';		// RELAY 상태 배열에 유저로 받은 값 반영
+
+    kfree(data);										// 버퍼 메모리 해제
+    return count;
+}
+
+// 파일 오퍼레이션 read 함수
+static ssize_t mds2450_multitab_control_read(struct file *filp, char *buff, size_t count, loff_t *offp)
+{
+	int  ret;
+	
+	// user로 값을 값을 전송
+	copy_to_user((void *)buff, (const void *)&key_value , sizeof(int));
+	ret = key_value;
+	key_value = 0;
+	
+	return ret;
+}
+
+// 파일 오퍼레이션 open 함수
+static int mds2450_multitab_control_open(struct inode * inode, struct file * file)
+{
+	int ret = 0;
+	int i;
+
+	printk(KERN_INFO "ready to scan key value\n");
+
+	// RELAY 상태 배열 동적 할당
+	multitab_array = kmalloc(multitab_count, GFP_KERNEL);
+	multitab_array_old = kmalloc(multitab_count, GFP_KERNEL);
+
+	// 실행과 함께 상태 초기화
+	for(i = 0; i < multitab_count; i++){
+		multitab_array[i] = 0;	
+		multitab_array_old[i] = multitab_array[i];
+	}
+
+	// GPIO Initial
+	s3c_gpio_cfgpin(S3C2410_GPG(1), S3C_GPIO_SFN(1));	// EINT9,	RELAY1
+	s3c_gpio_cfgpin(S3C2410_GPG(2), S3C_GPIO_SFN(1));	// EINT10,	RELAY2
+	s3c_gpio_cfgpin(S3C2410_GPG(3), S3C_GPIO_SFN(1));	// EINT11,	RELAY3
+	s3c_gpio_cfgpin(S3C2410_GPG(4), S3C_GPIO_SFN(1));	// EINT12,	LED1
+	s3c_gpio_cfgpin(S3C2410_GPG(5), S3C_GPIO_SFN(1));	// EINT13,	LED2
+	s3c_gpio_cfgpin(S3C2410_GPG(6), S3C_GPIO_SFN(1));	// EINT14,	LED3
+	s3c_gpio_cfgpin(S3C2410_GPG(7), S3C_GPIO_SFN(1));	// EINT15,	LED4
+
+	// Scan timer
+	mod_timer(&multitab_control_timer, jiffies + (MULTITAB_CONTROL_TIME));
+
+	return ret;
+}
+
+// 파일 오퍼레이션 release 함수
+static void mds2450_multitab_control_release(struct inode * inode, struct file * file)
+{
+	printk(KERN_INFO "end of the scanning\n");
+
+	// 동적 할당한 배열 메모리 해제 
+	kfree(multitab_array);								
+	kfree(multitab_array_old);							
+
+	del_timer_sync(&multitab_control_timer);			// 타이머 핸들러 해제
+}
+```
+디바이스 드라이버 파일을 open 할 때에는 각종 초기화를 하고 release 할 때에는 할당받은 것들의 해제를 한다.
+
+write를 할 때에는 user의 커널로 복사하고 read를 할 때에는 커널의 값을 user로 복사한다.
+
+##### 상세기능
+- open 함수에서는 GPIO 핀을 설정하고 타이머를 세팅 함과 동시에 현재 RELAY(멀티탭)의 상태를 저장 할 배열을 동적할당 했다.
+
+- release 함수에서는 동적할당 한 배열과 타이머를 해제하였다. 동적 할당한 메모리를 해제하지 않으면 메모리 충돌이 일어 날 수 있다.
+
+- write 함수에서는 user로 부터 받은 커맨드를 복사하여 값에 따라 RELAY(멀티탭) 상태 배열의 값을 바꿔준다.
+
+- read 함수를 만들어두긴 했으나 사용을 하지는 않았다. 
 
 #### 플랫폼 디바이스 드라이버 수정
 
