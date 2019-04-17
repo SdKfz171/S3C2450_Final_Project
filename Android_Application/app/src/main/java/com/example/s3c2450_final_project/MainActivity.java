@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
 
     Button btn;
     Button btn2;
-    Button pause;
+
 
     boolean btn_on;
     boolean btn2_on;
@@ -131,7 +131,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
 
         btn = (Button) findViewById(R.id.Button01);
         btn2 = (Button) findViewById(R.id.Button02);
-        pause = (Button) findViewById(R.id.pause);
+
         btn_on = false;
         btn2_on = false;
 
@@ -174,23 +174,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                 }
             }
         });
-          pause.setOnClickListener(new OnClickListener() {
-
-            public void onClick(View v) {
-                try{
-
-                    output.println("PAUSE");
-
-
-                    output.flush();
-
-                    Log.d("TEST", "Socket Sended!!");
-                }catch (Exception e){
-                    Toast.makeText(getApplicationContext(), "문자열 전송 실패", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
+    
     }
 
     @Override
