@@ -302,6 +302,6 @@ int getCmdLine(char *file, char *buf) { // 이거
     srcFp = fopen(file, "r");            //  전달받은 경로 file open (/proc/pid/cmdline)
 
     memset(buf, 0, sizeof(buf));         //  배열buf 0으로 memset
-    fgets(buf, 256, srcFp);              //  전달받은 경로 file buf 배열에 fgets함.
+    fgets(buf, 256, srcFp);              //  프로세스명을 buf에 씌움.
     fclose(srcFp);                       //  파일 디스크립터 닫기
 }
