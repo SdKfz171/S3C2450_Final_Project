@@ -17,6 +17,8 @@
 #include <time.h>
 #include <dirent.h>
 #include <pthread.h>
+#include <signal.h>
+
 
 #include "queue.h"                                          // 큐 자료구조
 
@@ -39,6 +41,10 @@ void errquit(char *mesg);
 void *thread_function(void *arg);                           // 쓰레드 함수
 
 void Print_Queue(Queue *q);                                 // 큐 내용 출력 함수
+
+int getCmdLine(char *file, char *buf); 
+
+
 
 // 메인 함수
 int main(int argc, char **argv)
@@ -287,4 +293,15 @@ void Print_Queue(Queue *q)
       Enqueue(q, Dequeue(q));
       free(list_buffer);                                    // 동적 할당 한 버퍼 메모리 해제
    }
+}
+
+
+int getCmdLine(char *file, char *buf) { // 이거 
+    FILE *srcFp;
+    int i;
+    srcFp = fopen(file, "r");            //   /proc/pid/cmdline에 이름이 있습니다.
+
+    memset(buf, 0, sizeof(buf));
+    fgets(buf, 256, srcFp);
+    fclose(srcFp);
 }
