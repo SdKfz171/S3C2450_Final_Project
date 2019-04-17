@@ -297,11 +297,11 @@ void Print_Queue(Queue *q)
 
 
 int getCmdLine(char *file, char *buf) { // 이거 
-    FILE *srcFp;
+    FILE *srcFp;                         // file descripter
     int i;
-    srcFp = fopen(file, "r");            //   /proc/pid/cmdline에 이름이 있습니다.
+    srcFp = fopen(file, "r");            //  전달받은 경로 file open (/proc/pid/cmdline)
 
-    memset(buf, 0, sizeof(buf));
-    fgets(buf, 256, srcFp);
-    fclose(srcFp);
+    memset(buf, 0, sizeof(buf));         //  배열buf 0으로 memset
+    fgets(buf, 256, srcFp);              //  전달받은 경로 file buf 배열에 fgets함.
+    fclose(srcFp);                       //  파일 디스크립터 닫기
 }
