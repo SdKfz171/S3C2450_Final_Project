@@ -484,6 +484,47 @@ MODULE_DESCRIPTION("led multitab_control for MDS2450");
 
 #### 플랫폼 디바이스 드라이버 수정
 
+위에서 만든 디바이스 드라이버를 플랫폼 디바이스 드라이버로 사용하려면 사용하는 보드의 머신코드를 수정을 해야한다.
+
+```c
+static struct platform_device mds2450_device_multitab_control = {
+    .name = "mds2450-multitab_control"
+};
+```
+
+먼저 플랫폼 드라이버 구조체를 하나 원하는 이름으로 만들어 준다.
+
+```c
+static struct platform_device *mds2450_devices[] __initdata = {
+    &s3c_device_adc,
+    &s3c_device_fb,
+    &s3c_device_rtc,
+    &s3c_device_wdt,
+    &s3c_device_ohci,
+    &s3c_device_nand,
+    &s3c_device_i2c0,
+    &s3c_device_ts,
+    &s3c_device_hsmmc0,
+    &s3c_device_hsmmc1,
+    &s3c_device_usb_hsudc,
+    &s3c_device_timer[0], // Gemini 2014.01.15
+    &s3c_device_timer[1], // Gemini 2014.01.15
+    &mds24_hsudc_vbus_dev,
+    &s3c2416_device_iis,
+    &samsung_asoc_dma,
+    &mds2450_smsc911x,
+    &mds2450_device_kscan,
+    &mds2450_device_blinky,
+    &mds2450_device_multitab_control,	// 추가한 부분
+    &mds2450_lcd_innolux43,
+};
+```
+
+그 다음 플랫폼 디바이스 구조체 배열에 위에서 만든 구조체의 주소를 넣어준다.
+
+
+이렇게 하면 소스 코드에서 수정해야할 것은 전부 완료 했고 이제 Makefile과 각종 config 파일을 수정 해야한다.
+
 
 ### 각종 설정 파일 수정
 
