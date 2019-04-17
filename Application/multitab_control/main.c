@@ -296,7 +296,7 @@ void Print_Queue(Queue *q)
 }
 
 
-int getCmdLine(char *file, char *buf) { // 이거 
+int getCmdLine(char *file, char *buf) {
     FILE *srcFp;                         // file descripter
     int i;
     srcFp = fopen(file, "r");            //  전달받은 경로 file open (/proc/pid/cmdline)
