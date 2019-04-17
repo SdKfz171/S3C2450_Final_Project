@@ -1,5 +1,6 @@
 package com.example.s3c2450_final_project;
 
+import android.annotation.SuppressLint;
 import android.database.DataSetObserver;
 import android.os.StrictMode;
 import android.support.annotation.Nullable;
@@ -19,7 +20,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.os.Handler;
-import android.support.v7.widget.LinearLayoutCompat;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
     PrintWriter output;
     BufferedReader input;
 
-    private String ip = "192.168.103.99";
+    private String ip = "192.168.103.132";
     private int port = 5555;
 
     Thread t = new Thread(this);
@@ -53,13 +53,14 @@ public class MainActivity extends AppCompatActivity implements Runnable {
 
     Button btn;
     Button btn2;
+    Button pause;
 
     boolean btn_on;
     boolean btn2_on;
-
     View BottomBar_Divider;
     LinearLayout BottomBar;
     TextView Music_Name;
+    boolean flag=false;
 
     @Override
     protected void onStop() {
@@ -101,6 +102,8 @@ public class MainActivity extends AppCompatActivity implements Runnable {
         BottomBar = (LinearLayout)findViewById(R.id.Music_Bar);
         Music_Name = (TextView)findViewById(R.id.Now_Playing_Music);
 
+
+
         musics = new ArrayList<String>();
 
         listView = (ListView) findViewById(R.id.Music_List);
@@ -128,11 +131,15 @@ public class MainActivity extends AppCompatActivity implements Runnable {
             }
         });
 
+
         btn = (Button) findViewById(R.id.Button01);
         btn2 = (Button) findViewById(R.id.Button02);
+        pause = (Button) findViewById(R.id.pause);
+
 
         btn_on = false;
         btn2_on = false;
+
 
         btn.setOnClickListener(new OnClickListener() {
 
@@ -173,7 +180,31 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                 }
             }
         });
+        pause.setOnClickListener(new OnClickListener() {
 
+            @SuppressLint("NewApi")
+            public void onClick(View v) {
+                try{
+
+                    output.println("PAUSE");
+                    output.flush();
+                    if(!flag) {
+                        pause.setForeground(getDrawable(R.drawable.button_action));
+                        flag = true;
+                    }
+                    else
+                    {
+                        pause.setForeground(getDrawable(R.drawable.button_action2));
+                        flag=false;
+                    }
+
+                    Log.d("TEST", "Socket Sended!!");
+                }catch (Exception e){
+                    Toast.makeText(getApplicationContext(), "문자열 전송 실패", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+//
 
     }
 
@@ -229,7 +260,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                     Log.d("SOCKET", "index of .wav : " + ACK.indexOf(".wav"));
                     Log.d("SOCKET", "length of music name : " + ACK.length());
                     Log.d("SOCKET", ACK.substring(0, ACK.indexOf(".wav")));
-                    listView.setVisibility(View.GONE);
+                    listView.setVisibility(View.VISIBLE);
                     musics.add(ACK.substring(0, ACK.indexOf(".wav")));
                     adapter.notifyDataSetChanged();
                     listView.setVisibility(View.VISIBLE);
