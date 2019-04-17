@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 
    while (1)
    {
-      FD_SET(0, &read_fds);                                 // read_fds에 0을 추가 
+      FD_SET(0, &read_fds);                                 // read_fds에 0(stdin)을 추가 
       FD_SET(s, &read_fds);                                 // read_fds에 소켓 디스크립터 값을 추가
       
       if (select(maxfdp1, &read_fds, NULL, NULL, NULL) < 0) // 사용 가능한 파일 디스크립터 조회
@@ -215,26 +215,26 @@ int main(int argc, char **argv)
             }
          }
       }
-      if (FD_ISSET(0, &read_fds))
+      if (FD_ISSET(0, &read_fds))                           // stdin 파일 디스크립터가 열려있다면
       {
-         if (fgets(bufmsg, MAXLINE, stdin))
+         if (fgets(sendbuf, MAXLINE, stdin))                 // 문자열을 입력 받았다면
          {
-            fprintf(stderr, "\033[1;33m"); //글자색을 노란색으로 변경
-            fprintf(stderr, "\033[1A");    //Y좌표를 현재 위치로부터 -1만큼 이동
-            sprintf(sendbuf, "%s", bufmsg); //메시지에 현재시간 추가
-            if (send(s, sendbuf, strlen(sendbuf), 0) < 0)
+            fprintf(stderr, "\033[1;33m");                  // 글자색을 노란색으로 변경
+            fprintf(stderr, "\033[1A");                     // Y좌표를 현재 위치로부터 -1만큼 이동
+            
+            if (send(s, sendbuf, strlen(sendbuf), 0) < 0)   // 소켓으로 전송
                puts("Error : Write error on socket.");
-            if (strstr(bufmsg, EXIT_STRING) != NULL)
+            if (strstr(bufmsg, EXIT_STRING) != NULL)        // 끝내는 문자열을 입력받으면 종료
             {
                puts("Good bye.");
-               close(s);
+               close(s);                                    // 소켓 디스크립터 닫기
                exit(0);
             }
          }
       }
    }
 
-   close(dev_fd);
+   close(dev_fd);                                           // 핀 제어 디바이스 드라이버 파일 디스크립터 닫기
 
    return 0;
 }
@@ -242,16 +242,16 @@ int main(int argc, char **argv)
 // 함수
 int tcp_connect(int af, char *servip, unsigned short port)
 {
-   struct sockaddr_in servaddr;
-   int s;
-   // 소켓 생성
-   if ((s = socket(af, SOCK_STREAM, 0)) < 0)
+   struct sockaddr_in servaddr;                             // 소켓 주소 구조체
+   int s;                                                   // 함수 내부에서 사용 할 소켓
+   
+   if ((s = socket(af, SOCK_STREAM, 0)) < 0)                // 소켓 생성
       return -1;
-   // 채팅 서버의 소켓주소 구조체 servaddr 초기화
-   bzero((char *)&servaddr, sizeof(servaddr));
-   servaddr.sin_family = af;
-   inet_pton(AF_INET, servip, &servaddr.sin_addr);
-   servaddr.sin_port = htons(port);
+   
+   bzero((char *)&servaddr, sizeof(servaddr));              // 채팅 서버의 소켓 주소 구조체 servaddr 초기화
+   servaddr.sin_family = af;                                // af값을 소켓 주소의 어드레스 패밀리값에 반영
+   inet_pton(AF_INET, servip, &servaddr.sin_addr);          // IPv4형식 주소를 바이너리 형태로 변경
+   servaddr.sin_port = htons(port);                         // port값을 네트워크 byte order로 변경 후 소켓 주소의 포트값에 반영
 
    // 연결요청
    if (connect(s, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
@@ -267,24 +267,24 @@ void errquit(char *mesg)
 
 void *thread_function(void *arg)
 {
-   system((char *)arg);
+   system((char *)arg);                                     // 인자로 넘겨받은 문자열을 쉘에서 실행
 }
 
 void Print_Queue(Queue *q)
 {
-   int index = 0;
-   char *list_buffer;
+   int i = 0;
+   char *list_buffer;                                       // 파일명을 임시로 저장할 문자열
 
    printf("Music List : \n");
-   for (; index < q->size; index++)
+   for (; i < q->size; i++)                                 // 큐의 크기 만큼 반복
    {
-      list_buffer = (char *)malloc(strlen(Peek(q)) + 1);
-      sprintf(list_buffer, "%s\n", Peek(q));
-      if (send(s, list_buffer, strlen(list_buffer), 0) < 0)
+      list_buffer = (char *)malloc(strlen(Peek(q)) + 1);    // 큐에서 PEEK한 값의 크기 + 1 만큼 동적 할당 
+      sprintf(list_buffer, "%s\n", Peek(q));                // PEEK한 값에 개행 문자를 하나 붙여서  
+      if (send(s, list_buffer, strlen(list_buffer), 0) < 0) // 소켓으로 전송
          puts("Error : Write error on socket.");
 
       printf("\t\t%s\n", Peek(q));
       Enqueue(q, Dequeue(q));
-      free(list_buffer);
+      free(list_buffer);                                    // 동적 할당 한 버퍼 메모리 해제
    }
 }
