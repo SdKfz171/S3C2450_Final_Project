@@ -528,6 +528,51 @@ static struct platform_device *mds2450_devices[] __initdata = {
 
 ### 각종 설정 파일 수정
 
+캐릭터 디바이스 드라이버 디렉토리에 있는 KConfig 파일을 열어서 menu 밑에 아래의 구문을 추가한다. 
+
+```
+config MDS2450_MULTITAB_CONTROL
+	tristate "MDS2450_MULTITAB_CONTROL"
+	depends on MACH_MDS2450
+	default y
+	help
+	 MDS 2450 MULTITAB_CONTROL
+```
+
+또한 Makefile에서도 한 줄을 추가 해준다.
+
+```makefile
+obj-y				+= mem.o random.o
+obj-$(CONFIG_TTY_PRINTK)	+= ttyprintk.o
+obj-y				+= misc.o
+obj-$(CONFIG_ATARI_DSP56K)	+= dsp56k.o
+obj-$(CONFIG_MDS2450_LED)	+= hello.o
+obj-$(CONFIG_MDS2450_HELLO)	+= hello2.o
+obj-$(CONFIG_MDS2450_KSCAN)	+= mds2450_keyscan.o
+obj-$(CONFIG_MDS2450_BLINKY)	+= mds2450_blinky.o
+obj-$(CONFIG_MDS2450_TIMER)	+= timerTest_mod.o
+obj-$(CONFIG_MDS2450_MULTITAB_CONTROL)	+= mds2450_multitab_control.o
+obj-$(CONFIG_VIRTIO_CONSOLE)	+= virtio_console.o
+obj-$(CONFIG_RAW_DRIVER)	+= raw.o
+obj-$(CONFIG_SGI_SNSC)		+= snsc.o snsc_event.o
+obj-$(CONFIG_MSM_SMD_PKT)	+= msm_smd_pkt.o
+obj-$(CONFIG_MSPEC)		+= mspec.o
+obj-$(CONFIG_MMTIMER)		+= mmtimer.o
+obj-$(CONFIG_UV_MMTIMER)	+= uv_mmtimer.o
+obj-$(CONFIG_VIOTAPE)		+= viotape.o
+obj-$(CONFIG_IBM_BSR)		+= bsr.o
+obj-$(CONFIG_SGI_MBCS)		+= mbcs.o
+obj-$(CONFIG_BRIQ_PANEL)	+= briq_panel.o
+obj-$(CONFIG_BFIN_OTP)		+= bfin-otp.o
+
+.....
+
+```
+
+당연하겠지만 여기서 추가하는 오브젝트 파일은 캐릭터 디바이스 드라이버의 오브젝트 파일이다.
+
+위와 같이 추가하면 커널 루트 디렉토리에서 make menuconfig를 했을 때 위의 정보대로 캐릭터 디바이스 드라이버에 등록 된 것을 확인 할 수 있다. 
+
 
 ## 리눅스 C 애플리케이션 작성
 
