@@ -13,112 +13,111 @@
 
 #define TCP_PORT 5555
 #define MAXLINE  511
-#define MAX_SOCK 1024 // 솔라리스의 경우 64
+#define MAX_SOCK 1024 											// 솔라리스의 경우 64
 
-char *EXIT_STRING = "exit";	// 클라이언트의 종료요청 문자열
-char *START_STRING = "Connected to chat_server \n";
-// 클라이언트 환영 메시지
-int maxfdp1;				// 최대 소켓번호 +1
-int num_user = 0;			// 채팅 참가자 수
-int num_chat = 0;			// 지금까지 오간 대화의 수
-int clisock_list[MAX_SOCK];		// 채팅에 참가자 소켓번호 목록
-char ip_list[MAX_SOCK][20];		//접속한 ip목록
-int listen_sock;			// 서버의 리슨 소켓
+char *EXIT_STRING = "exit";										// 클라이언트의 종료요청 문자열
+char *START_STRING = "Connected to chat_server \n";				// 클라이언트 환영 메시지
 
-							// 새로운 채팅 참가자 처리
-void addClient(int s, struct sockaddr_in *newcliaddr);
-int getmax();				// 최대 소켓 번호 찾기
-void removeClient(int s);	// 채팅 탈퇴 처리 함수
-int tcp_listen(int host, int port, int backlog); // 소켓 생성 및 listen
+int maxfdp1;													// 최대 소켓번호 +1
+int num_user = 0;												// 채팅 참가자 수
+int num_chat = 0;												// 지금까지 오간 대화의 수
+int clisock_list[MAX_SOCK];										// 채팅에 참가자 소켓번호 목록
+char ip_list[MAX_SOCK][20];										// 접속한 ip목록
+int listen_sock;												// 서버의 리슨 소켓
+
+void addClient(int s, struct sockaddr_in *newcliaddr);			// 새로운 채팅 참가자 처리
+int getmax();													// 최대 소켓 번호 찾기
+void removeClient(int s);										// 채팅 탈퇴 처리 함수
+int tcp_listen(int host, int port, int backlog); 				// 소켓 생성 및 listen
 void errquit(char *mesg) { perror(mesg); exit(1); }
 
 time_t ct;
 struct tm tm;
 
-void *thread_function(void *arg) { //명령어를 처리할 스레드
+void *thread_function(void *arg) { 								// 명령어를 처리할 스레드
 	int i;
 	printf("명령어 목록 : help, num_user, num_chat, ip_list\n");
 	while (1) {
 		char bufmsg[MAXLINE + 1];
-		fprintf(stderr, "\033[1;32m"); //글자색을 녹색으로 변경
-		printf("server>"); //커서 출력
-		fgets(bufmsg, MAXLINE, stdin); //명령어 입력
-		if (!strcmp(bufmsg, "\n")) continue;   //엔터 무시
-		else if (!strcmp(bufmsg, "help\n"))    //명령어 처리
+		fprintf(stderr, "\033[1;32m"); 							// 글자색을 녹색으로 변경
+		printf("server>"); 										// 커서 출력
+		fgets(bufmsg, MAXLINE, stdin); 							// 명령어 입력
+		if (!strcmp(bufmsg, "\n")) continue;   					// 엔터 무시
+		else if (!strcmp(bufmsg, "help\n"))    					// help 명령어 처리
 			printf("help, num_user, num_chat, ip_list\n");
-		else if (!strcmp(bufmsg, "num_user\n"))//명령어 처리
+		else if (!strcmp(bufmsg, "num_user\n"))					// num_user 명령어 처리
 			printf("현재 참가자 수 = %d\n", num_user);
-		else if (!strcmp(bufmsg, "num_chat\n"))//명령어 처리
+		else if (!strcmp(bufmsg, "num_chat\n"))					// num_chat 명령어 처리
 			printf("지금까지 오간 대화의 수 = %d\n", num_chat);
-		else if (!strcmp(bufmsg, "ip_list\n")) //명령어 처리
+		else if (!strcmp(bufmsg, "ip_list\n")) 					// ip_list 명령어 처리
 			for (i = 0; i < num_user; i++)
 				printf("%s\n", ip_list[i]);
-		else //예외 처리
+		else
 			printf("해당 명령어가 없습니다.help를 참조하세요.\n");
 	}
 }
 
 int main(int argc, char *argv[]) {
 	struct sockaddr_in cliaddr;
-	char buf[MAXLINE + 1]; //클라이언트에서 받은 메시지
+	char buf[MAXLINE + 1]; 										// 클라이언트에서 받은 메시지
 	int i, j, nbyte, accp_sock, addrlen = sizeof(struct
 		sockaddr_in);
-	fd_set read_fds;	//읽기를 감지할 fd_set 구조체
-	pthread_t a_thread;
+	fd_set read_fds;											// 파일 디스크립터 집합
+	pthread_t a_thread;											// 쓰레드
 
-	// tcp_listen(host, port, backlog) 함수 호출
-	listen_sock = tcp_listen(INADDR_ANY, TCP_PORT, 5);
-	//스레드 생성
+	listen_sock = tcp_listen(INADDR_ANY, TCP_PORT, 5);			// tcp_listen(host, port, backlog) 함수 호출
 	pthread_create(&a_thread, NULL, thread_function, (void *)NULL);
-	while (1) {
-		FD_ZERO(&read_fds);
-		FD_SET(listen_sock, &read_fds);
-		for (i = 0; i < num_user; i++)
-			FD_SET(clisock_list[i], &read_fds);
 
-		maxfdp1 = getmax() + 1;	// maxfdp1 재 계산
-		if (select(maxfdp1, &read_fds, NULL, NULL, NULL) < 0)
+	while (1) {
+		FD_ZERO(&read_fds);										// read_fds를 초기화
+		FD_SET(listen_sock, &read_fds);							// read_fds에 소켓(수신 소켓) 디스크립터 값을 추가
+		for (i = 0; i < num_user; i++)					
+			FD_SET(clisock_list[i], &read_fds);					// read_fds에 소켓(클라이언트 소켓) 디스크립터 값을 추가
+
+		maxfdp1 = getmax() + 1;									// maxfdp1 재 계산
+
+		if (select(maxfdp1, &read_fds, NULL, NULL, NULL) < 0)	// 사용 가능한 파일 디스크립터 조회 
 			errquit("select fail");
 
-		if (FD_ISSET(listen_sock, &read_fds)) {
+		if (FD_ISSET(listen_sock, &read_fds)) {					// 수신 소켓이 추가되어 있는지 확인
 			accp_sock = accept(listen_sock,
-				(struct sockaddr*)&cliaddr, &addrlen);
+				(struct sockaddr*)&cliaddr, &addrlen);			// 클라이언트 주소 등록
 			if (accp_sock == -1) errquit("accept fail");
-			addClient(accp_sock, &cliaddr);
+			addClient(accp_sock, &cliaddr);						// 채팅 참가자 추가 함수 호출
 			send(accp_sock, START_STRING, strlen(START_STRING), 0);
-			ct = time(NULL);			//현재 시간을 받아옴
+			ct = time(NULL);									// 현재 시간을 받아옴
 			tm = *localtime(&ct);
-			write(1, "\033[0G", 4);		//커서의 X좌표를 0으로 이동
+			write(1, "\033[0G", 4);								// 커서의 X좌표를 0으로 이동
 			printf("[%02d:%02d:%02d]", tm.tm_hour, tm.tm_min, tm.tm_sec);
-			fprintf(stderr, "\033[33m");//글자색을 노란색으로 변경
+			fprintf(stderr, "\033[33m");						// 글자색을 노란색으로 변경
 			printf("사용자 1명 추가. 현재 참가자 수 = %d\n", num_user);
-			fprintf(stderr, "\033[32m");//글자색을 녹색으로 변경
-			fprintf(stderr, "server>"); //커서 출력
+			fprintf(stderr, "\033[32m");						// 글자색을 녹색으로 변경
+			fprintf(stderr, "server>"); 						// 커서 출력
 		}
 
 		// 클라이언트가 보낸 메시지를 모든 클라이언트에게 방송
 		for (i = 0; i < num_user; i++) {
-			if (FD_ISSET(clisock_list[i], &read_fds)) {
-				num_chat++;				//총 대화 수 증가
-				nbyte = recv(clisock_list[i], buf, MAXLINE, 0);
+			if (FD_ISSET(clisock_list[i], &read_fds)) {			// 클라이언트 소켓이 추가되어 있는지 학인
+				num_chat++;										// 총 대화 수 증가
+				nbyte = recv(clisock_list[i], buf, MAXLINE, 0);	// 클라이언트에서 수신 
 				if (nbyte <= 0) {
-					removeClient(i);	// 클라이언트의 종료
+					removeClient(i);							// 클라이언트의 종료
 					continue;
 				}
 				buf[nbyte] = 0;
-				// 종료문자 처리
-				if (strstr(buf, EXIT_STRING) != NULL) {
-					removeClient(i);	// 클라이언트의 종료
+				
+				if (strstr(buf, EXIT_STRING) != NULL) {			// 종료문자 처리
+					removeClient(i);							// 클라이언트의 종료
 					continue;
 				}
-				// 모든 채팅 참가자에게 메시지 방송
+				
 				for (j = 0; j < num_user; j++)
-					send(clisock_list[j], buf, nbyte, 0);
-				printf("\033[0G");		//커서의 X좌표를 0으로 이동
-				fprintf(stderr, "\033[97m");//글자색을 흰색으로 변경
-				printf("%s", buf);			//메시지 출력
-				fprintf(stderr, "\033[32m");//글자색을 녹색으로 변경
-				fprintf(stderr, "server>"); //커서 출력
+					send(clisock_list[j], buf, nbyte, 0);		// 모든 채팅 참가자에게 메시지 방송
+				printf("\033[0G");								// 커서의 X좌표를 0으로 이동
+				fprintf(stderr, "\033[97m");					// 글자색을 흰색으로 변경
+				printf("%s", buf);								// 메시지 출력
+				fprintf(stderr, "\033[32m");					// 글자색을 녹색으로 변경
+				fprintf(stderr, "server>"); 					// 커서 출력
 			}
 		}
 
@@ -131,31 +130,31 @@ int main(int argc, char *argv[]) {
 void addClient(int s, struct sockaddr_in *newcliaddr) {
 	char buf[20];
 	inet_ntop(AF_INET, &newcliaddr->sin_addr, buf, sizeof(buf));
-	write(1, "\033[0G", 4);		//커서의 X좌표를 0으로 이동
-	fprintf(stderr, "\033[33m");	//글자색을 노란색으로 변경
-	printf("new client: %s\n", buf);//ip출력
-	// 채팅 클라이언트 목록에 추가
-	clisock_list[num_user] = s;
+	write(1, "\033[0G", 4);										// 커서의 X좌표를 0으로 이동
+	fprintf(stderr, "\033[33m");								// 글자색을 노란색으로 변경
+	printf("new client: %s\n", buf);							// ip출력
+	
+	clisock_list[num_user] = s;									// 채팅 클라이언트 목록에 추가
 	strcpy(ip_list[num_user], buf);
-	num_user++; //유저 수 증가
+	num_user++; 												// 유저 수 증가
 }
 
 // 채팅 탈퇴 처리
 void removeClient(int s) {
-	close(clisock_list[s]);
-	if (s != num_user - 1) { //저장된 리스트 재배열
+	close(clisock_list[s]);										// 소켓 디스크립터 닫기
+	if (s != num_user - 1) { 									// 저장된 리스트 재배열
 		clisock_list[s] = clisock_list[num_user - 1];
 		strcpy(ip_list[s], ip_list[num_user - 1]);
 	}
-	num_user--; //유저 수 감소
-	ct = time(NULL);			//현재 시간을 받아옴
+	num_user--; 												// 유저 수 감소
+	ct = time(NULL);											// 현재 시간을 받아옴
 	tm = *localtime(&ct);
-	write(1, "\033[0G", 4);		//커서의 X좌표를 0으로 이동
-	fprintf(stderr, "\033[33m");//글자색을 노란색으로 변경
+	write(1, "\033[0G", 4);										// 커서의 X좌표를 0으로 이동
+	fprintf(stderr, "\033[33m");								// 글자색을 노란색으로 변경
 	printf("[%02d:%02d:%02d]", tm.tm_hour, tm.tm_min, tm.tm_sec);
 	printf("채팅 참가자 1명 탈퇴. 현재 참가자 수 = %d\n", num_user);
-	fprintf(stderr, "\033[32m");//글자색을 녹색으로 변경
-	fprintf(stderr, "server>"); //커서 출력
+	fprintf(stderr, "\033[32m");								// 글자색을 녹색으로 변경
+	fprintf(stderr, "server>");									// 커서 출력
 }
 
 // 최대 소켓번호 찾기

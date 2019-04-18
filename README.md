@@ -76,6 +76,10 @@ NFS 설정을 바꾸고 난 뒤에 기존에 파일시스템이 뻗는 일이 �
 
 먼저 캐릭터 디바이스 드라이버를 새로 하나 만들고 플랫폼 디바이스 드라이버에서 해당 디바이스 드라이버를 추가해준다.
 
+[캐릭터 디바이스 드라이버 디렉토리](https://github.com/SdKfz171/S3C2450_Final_Project/tree/master/Kernel/drivers/char)
+
+[머신 코드 디렉토리](https://github.com/SdKfz171/S3C2450_Final_Project/tree/master/Kernel/arch/arm/mach-s3c2416)
+
 #### 캐릭터 디바이스 드라이버 작성
 
 module_init(), module_exit()
@@ -482,9 +486,11 @@ MODULE_DESCRIPTION("led multitab_control for MDS2450");
 ```
 
 
-#### 플랫폼 디바이스 드라이버 수정
+#### 플랫폼 디바이스 드라이버(머신 코드) 수정
 
 위에서 만든 디바이스 드라이버를 플랫폼 디바이스 드라이버로 사용하려면 사용하는 보드의 머신코드를 수정을 해야한다.
+
+머신 코드는 하드웨어에 종속적인 코드이다. 각각의 칩마다 다르게 작성되어있다. 
 
 ```c
 static struct platform_device mds2450_device_multitab_control = {
@@ -522,7 +528,9 @@ static struct platform_device *mds2450_devices[] __initdata = {
 
 그 다음 플랫폼 디바이스 구조체 배열에 위에서 만든 구조체의 주소를 넣어준다.
 
+머신 코드는 매우 길기 때문에 생략한다.
 
+<br>
 이렇게 하면 소스 코드에서 수정해야할 것은 전부 완료 했고 이제 Makefile과 각종 config 파일을 수정 해야한다.
 
 
@@ -576,6 +584,14 @@ obj-$(CONFIG_BFIN_OTP)		+= bfin-otp.o
 
 ## 리눅스 C 애플리케이션 작성
 
+커널쪽의 디바이스 드라이버를 모두 작성하면 실제로 유저가 실행시킬 애플리케이션 프로그램을 작성한다.
+
+애플리케이션의 구성은 PC에서 실행 시킬 소켓 서버 프로그램과 클라이언트가 되어줄 보드 프로그램이 있다.
+
 ### 소켓 서버 프로그램
+
+소켓 서버 프로그램에서는 클라이언트를 accept 해주고 클라이언트로 부터 받은 값을 다시 모든 클라이인트들에게 뿌리는 역할을 수행한다.
+
+
 
 ### 보드 소켓 클라이언트 프로그램
