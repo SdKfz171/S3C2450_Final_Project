@@ -11,7 +11,7 @@
 #include <time.h>
 #include <pthread.h>
 
-#define TCP_PORT 5555
+#define TCP_PORT 5555											// 통신 포트
 #define MAXLINE  511
 #define MAX_SOCK 1024 											// 솔라리스의 경우 64
 
