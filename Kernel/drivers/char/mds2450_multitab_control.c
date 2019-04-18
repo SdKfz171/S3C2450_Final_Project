@@ -71,15 +71,15 @@ static void multitab_control_timer_handler(unsigned long data)
 
 // 파일 오퍼레이션 write 함수
 static ssize_t mds2450_multitab_control_write(struct file * filp, const char * buf, size_t count, loff_t * pos){
-    char * data;										// 유저에게서 받은 값을 저장 할 버퍼
-    data = kmalloc(count, GFP_KERNEL);					// 버퍼에 동적 할당 
+    char * data;													// 유저에게서 받은 값을 저장 할 버퍼
+    data = kmalloc(count, GFP_KERNEL);								// 버퍼에 동적 할당 
 
-    copy_from_user(data, buf, count);					// 유저로 부터 값 복사
+    copy_from_user(data, buf, count);								// 유저로 부터 값 복사
     printk("%s\n", data);
     
-	multitab_array[data[0] - '0'] = data[1] - '0';		// RELAY 상태 배열에 유저로 받은 값 반영
+	multitab_array[data[0] - '0'] = data[1] - '0';					// RELAY 상태 배열에 유저로 받은 값 반영
 
-    kfree(data);										// 버퍼 메모리 해제
+    kfree(data);													// 버퍼 메모리 해제
     return count;
 }
 
@@ -115,13 +115,13 @@ static int mds2450_multitab_control_open(struct inode * inode, struct file * fil
 	}
 
 	// GPIO Initial
-	s3c_gpio_cfgpin(S3C2410_GPG(1), S3C_GPIO_SFN(1));	// EINT9,	RELAY1
-	s3c_gpio_cfgpin(S3C2410_GPG(2), S3C_GPIO_SFN(1));	// EINT10,	RELAY2
-	s3c_gpio_cfgpin(S3C2410_GPG(3), S3C_GPIO_SFN(1));	// EINT11,	RELAY3
-	s3c_gpio_cfgpin(S3C2410_GPG(4), S3C_GPIO_SFN(1));	// EINT12,	LED1
-	s3c_gpio_cfgpin(S3C2410_GPG(5), S3C_GPIO_SFN(1));	// EINT13,	LED2
-	s3c_gpio_cfgpin(S3C2410_GPG(6), S3C_GPIO_SFN(1));	// EINT14,	LED3
-	s3c_gpio_cfgpin(S3C2410_GPG(7), S3C_GPIO_SFN(1));	// EINT15,	LED4
+	s3c_gpio_cfgpin(S3C2410_GPG(1), S3C_GPIO_SFN(1));				// EINT9,	RELAY1
+	s3c_gpio_cfgpin(S3C2410_GPG(2), S3C_GPIO_SFN(1));				// EINT10,	RELAY2
+	s3c_gpio_cfgpin(S3C2410_GPG(3), S3C_GPIO_SFN(1));				// EINT11,	RELAY3
+	s3c_gpio_cfgpin(S3C2410_GPG(4), S3C_GPIO_SFN(1));				// EINT12,	LED1
+	s3c_gpio_cfgpin(S3C2410_GPG(5), S3C_GPIO_SFN(1));				// EINT13,	LED2
+	s3c_gpio_cfgpin(S3C2410_GPG(6), S3C_GPIO_SFN(1));				// EINT14,	LED3
+	s3c_gpio_cfgpin(S3C2410_GPG(7), S3C_GPIO_SFN(1));				// EINT15,	LED4
 
 	// Scan timer
 	mod_timer(&multitab_control_timer, jiffies + (MULTITAB_CONTROL_TIME));
@@ -138,7 +138,7 @@ static void mds2450_multitab_control_release(struct inode * inode, struct file *
 	kfree(multitab_array);								
 	kfree(multitab_array_old);							
 
-	del_timer_sync(&multitab_control_timer);			// 타이머 핸들러 해제
+	del_timer_sync(&multitab_control_timer);						// 타이머 핸들러 해제
 }
 
 // 현재 디바이스 드라이버의 파일 오퍼레이션 구조체
