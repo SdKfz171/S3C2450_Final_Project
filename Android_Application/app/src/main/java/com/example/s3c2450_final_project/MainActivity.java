@@ -116,8 +116,11 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                     int selected_index = position;
                     String selected_music = (String) parent.getItemAtPosition(position);
 
-                    output.println("PLAY" + position);
+                    output.println("NEW");
                     output.flush();
+                    
+                    output.println("PLAY" + position);
+                    output.flush();     
 
                     Log.d("SOCKET", "Play Position " + selected_index);
 
