@@ -1015,6 +1015,33 @@ int main(int argc, char **argv)
                }
                closedir(dir);                               // 디렉토리 닫기
             }
+            else if(!strcmp(bufmsg, "NEW\n"))               // 수신 버퍼의 데이터가 NEW\n이면
+            {
+               dir = opendir("/proc");                      // /proc 디렉토리 불러오기
+                  
+               while ((ent = readdir(dir)) != NULL)         // 디렉토리의 파일이 없을 때 까지 읽기
+               {                                         
+                  lstat(ent->d_name, &fileStat);            // 파일의 상태 정보를 읽기
+
+                  if (!S_ISDIR(fileStat.st_mode))           // 파일이 디렉토리가 아니라면
+                     continue;                              // 스킵
+
+                  pid = atoi(ent->d_name);                  // 디렉토리명을 숫자로 반환
+                  if (pid <= 0)
+                     continue;                              // 숫자가 아니라면 다시 스킵
+
+                  sprintf(tempPath, "/proc/%d/cmdline", pid); // cmdline : 프로세스 이름이 적힌파일
+                  getCmdLine(tempPath, cmdLine);              // /proc/pid/cmdline에서 프로세스명을 가져오는 함수 호출 
+                                                               
+                  if (strcmp(cmdLine, "aplay") == 0)        // 프로세스명에 aplay가 들어 있으면
+                  {
+                     kill(pid, SIGKILL);                    // 프로세스 종료
+                     break;
+                  }
+               }
+
+               closedir(dir);                               // 디렉토리 닫기
+            }
          }
       }
       if (FD_ISSET(0, &read_fds))                           // stdin 파일 디스크립터가 열려있다면
@@ -1093,13 +1120,14 @@ void Print_Queue(Queue *q)
 
 
 int getCmdLine(char *file, char *buf) {
-    FILE *srcFp;                         // file descripter
+    FILE *srcFp;                                            // file descripter
     int i;
-    srcFp = fopen(file, "r");            //  전달받은 경로 file open (/proc/pid/cmdline)
+    srcFp = fopen(file, "r");                               //  전달받은 경로 file open (/proc/pid/cmdline)
 
-    memset(buf, 0, sizeof(buf));         //  배열buf 0으로 memset
-    fgets(buf, 256, srcFp);              //  프로세스명을 buf에 씌움.
-    fclose(srcFp);                       //  파일 디스크립터 닫기
+    memset(buf, 0, sizeof(buf));                            //  배열buf 0으로 memset
+    fgets(buf, 256, srcFp);                                 //  프로세스명을 buf에 씌움.
+    fclose(srcFp);                                          //  파일 디스크립터 닫기
 }
+
 
 ```
