@@ -4,6 +4,12 @@
 
 menu "Character devices"
 
+config MDS2450_SERVO
+	tristate "MDS2450_SERVO"
+	depends on MACH_MDS2450
+	default y
+	help
+	 MDS 2450 SERVO
 
 config MDS2450_MULTITAB_CONTROL
 	tristate "MDS2450_MULTITAB_CONTROL"

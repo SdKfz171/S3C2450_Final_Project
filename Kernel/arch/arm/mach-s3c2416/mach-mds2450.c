@@ -316,6 +316,9 @@ static struct platform_device mds2450_device_multitab_control = {
     .name = "mds2450-multitab_control"
 };
 
+static struct platform_device mds2450_device_servo = {
+    .name = "mds2450-servo"
+};
 
 static struct i2c_board_info mds2450_i2c0_board_info[] __initdata = {
     {
@@ -384,6 +387,7 @@ static struct platform_device *mds2450_devices[] __initdata = {
     &mds2450_device_kscan,
     &mds2450_device_blinky,
     &mds2450_device_multitab_control,
+    &mds2450_device_servo,
     &mds2450_lcd_innolux43,
 };
 

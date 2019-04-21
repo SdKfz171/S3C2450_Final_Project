@@ -11,6 +11,7 @@ obj-$(CONFIG_MDS2450_HELLO)	+= hello2.o
 obj-$(CONFIG_MDS2450_KSCAN)	+= mds2450_keyscan.o
 obj-$(CONFIG_MDS2450_BLINKY)	+= mds2450_blinky.o
 obj-$(CONFIG_MDS2450_TIMER)	+= timerTest_mod.o
+obj-$(CONFIG_MDS2450_SERVO)	+= mds2450_servo.o
 obj-$(CONFIG_MDS2450_MULTITAB_CONTROL)	+= mds2450_multitab_control.o
 obj-$(CONFIG_VIRTIO_CONSOLE)	+= virtio_console.o
 obj-$(CONFIG_RAW_DRIVER)	+= raw.o
