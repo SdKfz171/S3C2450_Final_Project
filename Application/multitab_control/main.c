@@ -25,6 +25,7 @@
 
 // 매크로
 #define MDS2450_MULTITAB_CONTROL_MAJOR 71                   // 디바이스 드라이버 메이저 넘버
+#define MDS2450_SERVO   74
 
 #define TCP_PORT 5555                                       // 소켓통신 포트
 #define MAXLINE 1000                                        // 소켓으로 한번에 받을 수 있는 데이터 길이
@@ -41,11 +42,13 @@ void errquit(char *mesg);
 
 void *thread_function(void *arg);                           // 쓰레드 함수
 
+void *servo_function(void *arg);   			    // 서보 제어 하기 위한 쓰레드 함수
+
 void Print_Queue(List *list);                                 // 큐 내용 출력 함수
 
 int getCmdLine(char *file, char *buf); 
 
- 
+  int servo_fd;
 
 // 메인 함수
 int main(int argc, char **argv)
@@ -60,9 +63,12 @@ int main(int argc, char **argv)
    struct dirent *ent;                                      // 파일의 inode로 파일을 선택할 dirent 구조체
 
    int dev_fd;                                              // 핀 제어 디바이스 드라이버 파일 디스크립터
+
    char dev_path[32];                                       // 디바이스 드라이보 파일 패스
+   char dev_servo[32];
 
    pthread_t s_thread;                                      // aplay 명령을 실행 할 스레드
+   pthread_t servo_threadid;
 
    char bufmsg[MAXLINE];                                    // 수신 버퍼
    char sendbuf[MAXLINE];                                   // 송신 버퍼
@@ -72,8 +78,9 @@ int main(int argc, char **argv)
    char command[2];                                         // LED 커맨드 저장 배열
 
    bool music_state = false;                                // 음악 재생 상태 플래그
+   bool servo_state = false;                        
    int aplaypid;                                            // aplay 프로세스 아이디
-
+   
 
    list_init(&list,free);               // list 초기화      
 
@@ -93,11 +100,18 @@ int main(int argc, char **argv)
    maxfdp1 = s + 1;                                         // 소켓 디스크립터 카운트 추가
    FD_ZERO(&read_fds);                                      // read_fds를 초기화
 
-   sprintf(dev_path, "/dev/multitab_control");              
+   sprintf(dev_path, "/dev/multitab_control");   
+   sprintf(dev_servo,"/dev/servo");           
    mknod(dev_path, (S_IRWXU | S_IRWXG | S_IFCHR),
    MKDEV(MDS2450_MULTITAB_CONTROL_MAJOR, 0));         // 디바이스 드라이버 초기화
 
+   mknod(dev_servo, (S_IRWXU | S_IRWXG | S_IFCHR),	// servo 제어 디바이스 드라이버 초기화
+   MKDEV(MDS2450_SERVO, 0));  
+
+
    dev_fd = open(dev_path, O_RDWR);                         // 디바이스 드라이버 파일 디스크립터 열기
+   servo_fd=open(dev_servo,O_RDWR);
+
    if (0 > dev_fd)
       printf("Open fail!!\n");
 
@@ -181,12 +195,6 @@ int main(int argc, char **argv)
             else if (strstr(bufmsg, "PLAY") - bufmsg == 0 && 
                      strlen(bufmsg) == 6)                   // 수신 버퍼의 데이터가 PLAY로 시작하면서 길이가 6이면 ex) PLAY0\n
             {
-              //  if(flag)                // flag 는 음악이 정지 상태 일때 1로 바뀜 즉, 음악이 정지 상태일때만 KILL 신호를 주고 다른 노래를 재생 할 준비 함. 
-              // {
-              //  kill(aplaypid,SIGKILL);          // aplay 하고 있는 프로세스를 KIIL 
-              //  flag=0;                 // 다시 flag 0 setting
-              // }
-
 
                ListElmt *new_element;            // 새로운 element 선언 및 동적 할당
                new_element = (ListElmt *)malloc(sizeof(ListElmt));
@@ -284,6 +292,25 @@ int main(int argc, char **argv)
 
                closedir(dir);                               // 디렉토리 닫기
             }
+            else if (!strcmp(bufmsg, "SERVO\n"))   		
+                {
+                     char state[10]; 			    // 쓰레드 전달하기 위한 string
+
+                     if(!servo_state)
+                     {
+                     sprintf(state,"yes") ;		    // yes 문자열 저장
+                     pthread_create(&servo_threadid, NULL, servo_function, (void *)state); // servo 스레드에 yes 라는 state 를 전달
+                     servo_state=true;			    // 90도 이동후 다시 -90 하기 위해 플래그
+                     }
+                     else
+                     {
+                           sprintf(state,"no") ;	    // no 문자열 저장
+                     pthread_create(&servo_threadid, NULL, servo_function,  (void *)state);   // servo 스레드에 yes 라는 state 를 전달   
+                        servo_state=false;
+                     }
+               }
+
+
          }
       }
       if (FD_ISSET(0, &read_fds))                           // stdin 파일 디스크립터가 열려있다면
@@ -306,6 +333,7 @@ int main(int argc, char **argv)
    }
    free(element);
    close(dev_fd);                                           // 핀 제어 디바이스 드라이버 파일 디스크립터 닫기
+   close(servo_fd);                                        // servo device driver close
 
    return 0;
 }
@@ -340,6 +368,31 @@ void *thread_function(void *arg)
 {
    system((char *)arg);                                     // 인자로 넘겨받은 문자열을 쉘에서 실행
 }
+
+void *servo_function(void *arg)   			    // 서보 제어하는 스레드.
+{
+      int i;
+      i=0;
+
+      if((strcmp((char *)arg,"yes"))==0)		    // 전달 받은 매개변수의 문자열이 yes 인 경우
+      { 
+      for(i=0;i<25;i++)					    // 서보모터가 90도 이동하는데 소요되는 시간(?)을 계산하여 반복문으로 90도 만큼 돌리기 위해 25 만큼 반복문
+      {
+             write(servo_fd,"1",1);			    // 서보 파일 디스크립터 1을 write 함. (+ 90도 )
+      }
+   }
+   else
+   {
+          for(i=0;i<25;i++)				     // 서보모터가 -90도 이동하는데 소요되는 시간(?)을 계산하여 반복문으로 90도 만큼 돌리기 위해 25 만큼 반복문
+      {
+             write(servo_fd,"0",1);			    // 서보 파일 디스크립터 0을 write 함. (- 90도 )
+      }
+   }
+
+}
+
+
+
 
 void Print_Queue(List *list)
 {
