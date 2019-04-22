@@ -2,8 +2,10 @@ package com.example.s3c2450_final_project;
 
 import android.annotation.SuppressLint;
 import android.database.DataSetObserver;
+import android.os.Build;
 import android.os.StrictMode;
 import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import java.io.BufferedReader;
@@ -52,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
     ArrayAdapter<String> adapter;
 
     Button btn;
-    Button btn2;
+    Button servo;
     Button pause;
 
     boolean btn_on;
@@ -61,6 +63,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
     LinearLayout BottomBar;
     TextView Music_Name;
     boolean flag=false;
+    boolean playflag=false;
 
     @Override
     protected void onStop() {
@@ -110,22 +113,23 @@ public class MainActivity extends AppCompatActivity implements Runnable {
         adapter = new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_list_item_1, musics);
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 try{
-                    int selected_index = position;
-                    String selected_music = (String) parent.getItemAtPosition(position);
 
+                    String selected_music = (String) parent.getItemAtPosition(position);
+//
+//
                     output.println("NEW");
                     output.flush();
-                    
+
                     output.println("PLAY" + position);
-                    output.flush();     
+                    output.flush();
 
                     pause.setForeground(getDrawable(R.drawable.button_action2));
                     flag=false;
-                    
-                    Log.d("SOCKET", "Play Position " + selected_index);
+
 
                     BottomBar_Divider.setVisibility(View.VISIBLE);
                     Music_Name.setText(selected_music);
@@ -139,8 +143,8 @@ public class MainActivity extends AppCompatActivity implements Runnable {
 
 
         btn = (Button) findViewById(R.id.Button01);
-        btn2 = (Button) findViewById(R.id.Button02);
-        pause = (Button) findViewById(R.id.pause);
+        servo = (Button) findViewById(R.id.Button02);
+        pause = (Button) findViewById(R.id.Music_Button);
 
 
         btn_on = false;
@@ -167,16 +171,18 @@ public class MainActivity extends AppCompatActivity implements Runnable {
             }
         });
 
-        btn2.setOnClickListener(new OnClickListener() {
+        servo.setOnClickListener(new OnClickListener() {
 
             public void onClick(View v) {
                 try{
                     if(!btn2_on){
-                        output.println("C11");
-                        btn2.setText("LED1 OFF");
+                        output.println("SERVO");
+                        servo.setText("SERVO -90");
+                        btn2_on=true;
                     } else {
-                        output.println("C10");
-                        btn2.setText("LED1 ON");
+                        output.println("SERVO");
+                        servo.setText("SERVO +90");
+                        btn2_on=false;
                     }
                     output.flush();
 //                    btn2_on = !btn2_on;
@@ -246,11 +252,11 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                         btn_on = true;
                         break;
                     case "C10":
-                        btn2.setText("LED1 ON");
+                        servo.setText("LED1 ON");
                         btn2_on = false;
                         break;
                     case "C11":
-                        btn2.setText("LED1 OFF");
+                        servo.setText("LED1 OFF");
                         btn2_on = true;
                         break;
                     case "START":
