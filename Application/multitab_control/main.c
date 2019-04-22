@@ -21,6 +21,7 @@
 
 
 #include "queue.h"                                          // 큐 자료구조
+#include "list.c"
 
 // 매크로
 #define MDS2450_MULTITAB_CONTROL_MAJOR 71                   // 디바이스 드라이버 메이저 넘버
@@ -40,16 +41,20 @@ void errquit(char *mesg);
 
 void *thread_function(void *arg);                           // 쓰레드 함수
 
-void Print_Queue(Queue *q);                                 // 큐 내용 출력 함수
+void Print_Queue(List *list);                                 // 큐 내용 출력 함수
 
 int getCmdLine(char *file, char *buf); 
 
-
+ 
 
 // 메인 함수
 int main(int argc, char **argv)
 {
-   Queue q;                                                 // 음악을 저장 할 큐
+ 
+   List list;                                               // 음악목록을 저장할 linked list                                   
+   ListElmt *element;                   //  list 의 element 선언 및 동적 할당                        
+   element = (ListElmt *)malloc(sizeof(ListElmt));
+
 
    DIR *dir;                                                // 디렉터리를 조회 할 디렉터리 구조체
    struct dirent *ent;                                      // 파일의 inode로 파일을 선택할 dirent 구조체
@@ -68,8 +73,11 @@ int main(int argc, char **argv)
 
    bool music_state = false;                                // 음악 재생 상태 플래그
    int aplaypid;                                            // aplay 프로세스 아이디
+   int flag=0;
 
-   QueueInit(&q);                                           // 큐 초기화
+   list_init(&list,free);               // list 초기화      
+
+   element=list.head;                   // element 를 list 의 헤드를 가리키게함.(리스트를 비울때 헤드부터 비우게 하기 위함)
 
    if (argc != 3)                         
    {
@@ -87,7 +95,7 @@ int main(int argc, char **argv)
 
    sprintf(dev_path, "/dev/multitab_control");              
    mknod(dev_path, (S_IRWXU | S_IRWXG | S_IFCHR),
-         MKDEV(MDS2450_MULTITAB_CONTROL_MAJOR, 0));         // 디바이스 드라이버 초기화
+   MKDEV(MDS2450_MULTITAB_CONTROL_MAJOR, 0));         // 디바이스 드라이버 초기화
 
    dev_fd = open(dev_path, O_RDWR);                         // 디바이스 드라이버 파일 디스크립터 열기
    if (0 > dev_fd)
@@ -128,8 +136,16 @@ int main(int argc, char **argv)
             {
                printf("APP STARTED!!\n");                   
 
-               while (!IsEmpty(&q))                         // 기존의 큐에 데이터가 있으면 
-                  Dequeue(&q);                              // 기존의 데이터 전부 제거
+               // while (!IsEmpty(&q))                         // 기존의 큐에 데이터가 있으면 
+               //    Dequeue(&q);                              // 기존의 데이터 전부 제거
+
+               while((list_size(&list)!=0))            // 리스트가 비워 있지 않을시 리스트 비우기 
+                  {
+                     list_rem_next(&list,element,NULL);         // 리스트 비움작업
+                     element=element->next;            // 다음 노드
+
+                  }
+
 
                printf("QUEUE CLEARED!!\n");
 
@@ -141,10 +157,14 @@ int main(int argc, char **argv)
                      // .wav로 끝나는 파일이면
                      if (strstr(ent->d_name, ".wav") - ent->d_name == strlen(ent->d_name) - 4)
                      {
-                        Enqueue(&q, ent->d_name);           // 큐에 파일명 추가
-                        printf("Equeue : %s\n", ent->d_name);
+                   //     Enqueue(&q, ent->d_name);           // 큐에 파일명 추가
+                        list_ins_next(&list,element,ent->d_name); // 재생목록을 list 에 insert 함.
+            
+                        printf("List in : %s\n", ent->d_name);
                      }
+
                   }
+                  //printf("listsize : %d",list_size(list)); 
                   closedir(dir);                            // 디렉토리 닫기
                }
                else
@@ -154,28 +174,42 @@ int main(int argc, char **argv)
             }
             else if (!strcmp(bufmsg, "LIST\n"))             // 수신 버퍼의 데이터가 LIST\n이면
             {
-               Print_Queue(&q);                             // 큐 데이터 출력 함수 호출
+               Print_Queue(&list);                             // 리스트 데이터 출력 함수 호출
+       //        print_list(&list);
+
             }
             else if (strstr(bufmsg, "PLAY") - bufmsg == 0 && 
                      strlen(bufmsg) == 6)                   // 수신 버퍼의 데이터가 PLAY로 시작하면서 길이가 6이면 ex) PLAY0\n
             {
+              //  if(flag)                // flag 는 음악이 정지 상태 일때 1로 바뀜 즉, 음악이 정지 상태일때만 KILL 신호를 주고 다른 노래를 재생 할 준비 함. 
+              // {
+              //  kill(aplaypid,SIGKILL);          // aplay 하고 있는 프로세스를 KIIL 
+              //  flag=0;                 // 다시 flag 0 setting
+              // }
+
+
+               ListElmt *new_element;            // 새로운 element 선언 및 동적 할당
+               new_element = (ListElmt *)malloc(sizeof(ListElmt));
+               new_element= list.head;           // element 가 list 의 head를 가리키게 함.  
                int i = 0;
                int music_index = bufmsg[4] - 0x30;          // 선택한 음악의 큐에서의 인덱스 
                char music_command[BUFSIZ];                  // aplay를 실행하는 명령어 저장 배열
-
-               for (; i < q.size; i++)                      // 큐의 사이즈만큼 반복
+               char save[20];
+               for (; i < list_size(&list); i++)                      // 큐의 사이즈만큼 반복
                {
                   if (i == music_index)                     // 선택한 음악의 인덱스이면
                   {
-                     printf("PLAY : %s\n", Peek(&q));
-                     sprintf(music_command, "aplay Playlist/%s", Peek(&q));
+                     printf("PLAY : %s\n", (char*)new_element->data); // 해당 element의 data 값 즉, 해당 노드의 음악명을 print함
+                     sprintf(music_command, "aplay Playlist/%s", (char*)new_element->data); // music_command에 aplay Playlist/(음악명) 저장.
                      printf("%s\n", music_command);
 
                      // 쓰레드에서 aplay 실행 ==> 이렇게 하지 않으면 aplay 프로그램이 포그라운드로 실행되기 때문에 현 프로그램의 사용이 불가능 해진다. 
                      pthread_create(&s_thread, NULL, thread_function, (void *)music_command);
                   }
-                  Enqueue(&q, Dequeue(&q));                 // <== 이 부분 때문에 LinkedList로 바꿀까 생각 중
+                  new_element=new_element->next; // 인덱스가 다음 노드를 가리키게 하기 위해 element를 next로 옮겨서 가리키게함.
+
                }
+       //        free(new_element);
             }
             else if(!strcmp(bufmsg, "PAUSE\n"))             // 수신 버퍼의 데이터가 PAUSE\n이면
             {
@@ -222,7 +256,10 @@ int main(int argc, char **argv)
             else if(!strcmp(bufmsg, "NEW\n"))               // 수신 버퍼의 데이터가 NEW\n이면
             {
                dir = opendir("/proc");                      // /proc 디렉토리 불러오기
-                  
+                 struct stat fileStat;    
+                 int pid;        
+             char tempPath[256];
+             char cmdLine[256];
                while ((ent = readdir(dir)) != NULL)         // 디렉토리의 파일이 없을 때 까지 읽기
                {                                         
                   lstat(ent->d_name, &fileStat);            // 파일의 상태 정보를 읽기
@@ -266,7 +303,7 @@ int main(int argc, char **argv)
          }
       }
    }
-
+   free(element);
    close(dev_fd);                                           // 핀 제어 디바이스 드라이버 파일 디스크립터 닫기
 
    return 0;
@@ -303,23 +340,30 @@ void *thread_function(void *arg)
    system((char *)arg);                                     // 인자로 넘겨받은 문자열을 쉘에서 실행
 }
 
-void Print_Queue(Queue *q)
+void Print_Queue(List *list)
 {
    int i = 0;
    char *list_buffer;                                       // 파일명을 임시로 저장할 문자열
+   ListElmt *new_element;                    // list 를 socket 통신으로 넘기기 위해 list element를 선언 하고 동적 할당.
+   new_element = (ListElmt *)malloc(sizeof(ListElmt));
+   new_element= list->head;                // new_element가 전달 받은 리스트의 헤드를 가리키게 함.
 
    printf("Music List : \n");
-   for (; i < q->size; i++)                                 // 큐의 크기 만큼 반복
+
+   for (; i < list_size(list); i++)                                 // 큐의 크기 만큼 반복
    {
-      list_buffer = (char *)malloc(strlen(Peek(q)) + 1);    // 큐에서 PEEK한 값의 크기 + 1 만큼 동적 할당 
-      sprintf(list_buffer, "%s\n", Peek(q));                // PEEK한 값에 개행 문자를 하나 붙여서  
+      list_buffer = (char *)malloc(strlen(new_element->data) + 1);    // data 에 저장된 음악 재생 string 길이보다 +1 하여 list buffer 동적 할당. 
+      sprintf(list_buffer, "%s\n",new_element->data);                // list_buffer에 재생명 copy  
+   
       if (send(s, list_buffer, strlen(list_buffer), 0) < 0) // 소켓으로 전송
          puts("Error : Write error on socket.");
 
-      printf("\t\t%s\n", Peek(q));
-      Enqueue(q, Dequeue(q));
+      printf("\t\t%s\n", new_element->data); 
+      //Enqueue(q, Dequeue(q));
+      new_element=new_element->next;             // 소켓으로 전송후 다음 재생목록을 가리킴
       free(list_buffer);                                    // 동적 할당 한 버퍼 메모리 해제
    }
+   free(new_element);
 }
 
 
