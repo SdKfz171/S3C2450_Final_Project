@@ -74,13 +74,17 @@ NFS 설정을 바꾸고 난 뒤에 기존에 파일시스템이 뻗는 일이 �
 
 ### 디바이스 드라이버 작성
 
-먼저 캐릭터 디바이스 드라이버를 새로 하나 만들고 플랫폼 디바이스 드라이버에서 해당 디바이스 드라이버를 추가해준다.
+먼저 캐릭터 디바이스 드라이버를 새로 만들고 플랫폼 디바이스 드라이버에서 해당 디바이스 드라이버를 추가해준다.
 
 [캐릭터 디바이스 드라이버 디렉토리](https://github.com/SdKfz171/S3C2450_Final_Project/tree/master/Kernel/drivers/char)
 
 [머신 코드 디렉토리](https://github.com/SdKfz171/S3C2450_Final_Project/tree/master/Kernel/arch/arm/mach-s3c2416)
 
 #### 캐릭터 디바이스 드라이버 작성
+
+캐릭터 디바이스 드라이버 중에 먼저 릴레이 제어 부분을 먼저 보자
+
+릴레이 제어 소스코드는 여기 => mds2450_multitab_control.c
 
 module_init(), module_exit()
 
@@ -283,7 +287,7 @@ static void multitab_control_timer_handler(unsigned long data)
 
 타이머 인터럽트 핸들러에서 지속적으로 RELAY(멀티탭) 상태 배열의 값을 확인하면서 RELAY의 값에 반영한다.
 
-#### 캐릭터 디바이스 드라이버 소스코드 전체
+#### mds2450_multitab_control 소스코드 전체
 
 ```c
 /*
@@ -486,6 +490,264 @@ MODULE_DESCRIPTION("led multitab_control for MDS2450");
 ```
 
 
+----
+
+여기서 부터는 mds2450_servo.c에 대한 설명이다.
+
+이름에서 알 수 있겠지만 서보모터에 관한 코드이다.
+
+이 코드는 함수명과 일부 설정만 변경하였기 때문에 중요하다고 생각되는 부분만 설명 하겠다.
+
+먼저 가장 중요한 메이저 값이다.
+
+```c
+#define MDS2450_MULTITAB_CONTROL_MAJOR 71
+```
+이 값은 항상 유일한 값이여한다. 그러므로 /proc/devices에서 등록되어 있지 않은 값을 넣도록 한다.
+
+여기서는 74번을 사용 하였다.
+
+
+파일 오퍼레이션 또한 각각의 디바이스 드라이버의 역할에 맞게 설계해준다.
+
+여기서는 GPG15번을 이용하여 서보모터를 제어하였다.
+
+```c
+static ssize_t mds2450_servo_write(struct file * filp, const char * buf, size_t count, loff_t * pos){
+    char * data;
+    data = kmalloc(count, GFP_KERNEL);
+
+    copy_from_user(data, buf, count);
+    printk("%c\n", data[0]);
+    
+    if(data[0] - '0'){
+    	printk("R90\n");
+    	servo_R90();
+    }
+    else{
+    	printk("R0\n");
+    	servo_R0();
+    }
+    kfree(data);
+    return count;
+}
+
+static ssize_t mds2450_servo_read(struct file *filp, char *buff, size_t count, loff_t *offp)
+{
+	int  ret;
+
+	copy_to_user((void *)buff, (const void *)&key_value , sizeof( int ));
+	ret = key_value;
+	key_value = 0;
+	
+	return ret;
+}
+
+static int mds2450_servo_open(struct inode * inode, struct file * file)
+{
+	int ret = 0;
+	int i;
+
+	printk(KERN_INFO "ready to operation for servo\n");
+
+	s3c_gpio_cfgpin(S3C2410_GPG(15), S3C_GPIO_SFN(1));	// EINT15,	LED4
+
+	return ret;
+}
+
+static void mds2450_servo_release(struct inode * inode, struct file * file)
+{
+	printk(KERN_INFO "end of servo\n");
+}
+```
+
+open에서는 디바이스 드라이버의 오픈과 동시에 GPG15번을 초기화 했고<br/>
+write에서는 값이 들어오는데에 따라 서보모터를 0˚나 +90˚로 전환한다.
+
+servo_R90 함수는 +90˚방향으로 회전시키고 servo_R0 함수는 0˚방향으로 회전시킨다.
+
+```c
+static void servo_R90(){
+	gpio_set_value(S3C2410_GPG(15), 1);
+	mdelay(2);		
+	udelay(400);	// 2.4ms delay
+	gpio_set_value(S3C2410_GPG(15), 0);
+	mdelay(17);	
+	udelay(600);	// 17.6ms delay
+}
+
+static void servo_R0(){
+	gpio_set_value(S3C2410_GPG(15), 1);
+	mdelay(1);
+	udelay(400);	// 1.4ms delay
+	gpio_set_value(S3C2410_GPG(15), 0);
+	mdelay(18);
+	udelay(600);	// 18.6ms delay
+}
+```
+SG90을 제어하기 위해서는 20ms주기의 PWM 신호를 보내주어야하는데 
+
+HIGH인 상태를 유지하는 시간으로 서보모터의 각도를 제어 할 수 있다.
+
+mdelay와 udelay로 나누어서 딜레이를 준 이유는 udelay(마이크로초 딜레이)에 인자로 1000이상 주게 되면 오차 값이 커지기 때문이다. 
+
+#### mds2450_multitab_control 소스코드 전체
+
+```c
+/*
+*	G2450_ADC.C - The s3c2450 adc module.
+*/
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/vmalloc.h>
+#include <asm/delay.h>
+#include <linux/io.h>
+#include <plat/adc.h>
+#include <plat/devs.h>
+#include <linux/platform_device.h>
+#include <mach/regs-gpio.h>
+#include <linux/gpio.h>
+#include <asm/uaccess.h>
+#include <linux/fcntl.h>
+#include <linux/fs.h>
+#include <linux/workqueue.h>
+#include <linux/interrupt.h>
+#include <linux/sched.h>
+#include <linux/delay.h>
+#include <linux/slab.h>
+#include <linux/timer.h>
+#include <linux/interrupt.h>
+#include <linux/device.h>
+#include <asm/io.h>
+#include <asm/irq.h>
+#include <plat/gpio-cfg.h>
+#include <linux/major.h>
+#include <linux/fs.h>
+#include <linux/cdev.h>
+
+#define MDS2450_SERVO_MAJOR 74
+static char servo_name[] = "mds2450-servo";
+
+static DECLARE_WAIT_QUEUE_HEAD(servo_wq);
+
+static int key_value = 0;
+
+static void servo_R90(){
+	gpio_set_value(S3C2410_GPG(15), 1);
+	mdelay(2);		
+	udelay(400);	// 2.4ms delay
+	gpio_set_value(S3C2410_GPG(15), 0);
+	mdelay(17);	
+	udelay(600);	// 17.6ms delay
+}
+
+static void servo_R0(){
+	gpio_set_value(S3C2410_GPG(15), 1);
+	mdelay(1);
+	udelay(400);	// 1.4ms delay
+	gpio_set_value(S3C2410_GPG(15), 0);
+	mdelay(18);
+	udelay(600);	// 18.6ms delay
+}
+
+static ssize_t mds2450_servo_write(struct file * filp, const char * buf, size_t count, loff_t * pos){
+    char * data;
+    data = kmalloc(count, GFP_KERNEL);
+
+    copy_from_user(data, buf, count);
+    printk("%c\n", data[0]);
+    
+    if(data[0] - '0'){
+    	printk("R90\n");
+    	servo_R90();
+    }
+    else{
+    	printk("R0\n");
+    	servo_R0();
+    }
+    kfree(data);
+    return count;
+}
+
+static ssize_t mds2450_servo_read(struct file *filp, char *buff, size_t count, loff_t *offp)
+{
+	int  ret;
+
+	copy_to_user((void *)buff, (const void *)&key_value , sizeof( int ));
+	ret = key_value;
+	key_value = 0;
+	
+	return ret;
+}
+
+static int mds2450_servo_open(struct inode * inode, struct file * file)
+{
+	int ret = 0;
+	int i;
+
+	printk(KERN_INFO "ready to operation for servo\n");
+
+	s3c_gpio_cfgpin(S3C2410_GPG(15), S3C_GPIO_SFN(1));	// EINT15,	LED4
+
+	return ret;
+}
+
+static void mds2450_servo_release(struct inode * inode, struct file * file)
+{
+	printk(KERN_INFO "end of servo\n");
+}
+
+static struct file_operations mds2450_servo_fops = {
+	.owner 	= THIS_MODULE,
+	.open 	= mds2450_servo_open,
+	.release= mds2450_servo_release,
+	.write 	= mds2450_servo_write,
+	.read 	= mds2450_servo_read,
+};
+
+static int __devinit mds2450_servo_probe(struct platform_device *pdev)
+{
+	int ret;
+
+	ret = register_chrdev( MDS2450_SERVO_MAJOR, servo_name, &mds2450_servo_fops );
+
+    return ret;
+}
+
+static int __devexit mds2450_servo_remove(struct platform_device *pdev)
+{
+	unregister_chrdev( MDS2450_SERVO_MAJOR, servo_name );
+
+	return 0;
+}
+
+static struct platform_driver mds2450_servo_device_driver = {
+	.probe      = mds2450_servo_probe,
+	.remove     = __devexit_p(mds2450_servo_remove),
+	.driver     = {
+		.name   = "mds2450-servo",
+		.owner  = THIS_MODULE,
+	}
+};
+
+static int __init mds2450_servo_init(void)
+{
+ 	return platform_driver_register(&mds2450_servo_device_driver);
+}
+
+static void __exit mds2450_servo_exit(void)
+{
+	platform_driver_unregister(&mds2450_servo_device_driver);
+}
+
+module_init(mds2450_servo_init);
+module_exit(mds2450_servo_exit);
+MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("servo for MDS2450");
+```
+
+
 #### 플랫폼 디바이스 드라이버(머신 코드) 수정
 
 위에서 만든 디바이스 드라이버를 플랫폼 디바이스 드라이버로 사용하려면 사용하는 보드의 머신코드를 수정을 해야한다.
@@ -496,9 +758,13 @@ MODULE_DESCRIPTION("led multitab_control for MDS2450");
 static struct platform_device mds2450_device_multitab_control = {
     .name = "mds2450-multitab_control"
 };
+
+static struct platform_device mds2450_device_servo = {
+    .name = "mds2450-servo"
+};
 ```
 
-먼저 플랫폼 드라이버 구조체를 하나 원하는 이름으로 만들어 준다.
+먼저 플랫폼 드라이버 구조체를 원하는 이름으로 만들어 준다.
 
 ```c
 static struct platform_device *mds2450_devices[] __initdata = {
@@ -521,7 +787,8 @@ static struct platform_device *mds2450_devices[] __initdata = {
     &mds2450_smsc911x,
     &mds2450_device_kscan,
     &mds2450_device_blinky,
-    &mds2450_device_multitab_control,	// 추가한 부분
+    &mds2450_device_multitab_control,  // 추가한 부분
+    &mds2450_device_servo,             // 추가한 부분
     &mds2450_lcd_innolux43,
 };
 ```
@@ -539,6 +806,13 @@ static struct platform_device *mds2450_devices[] __initdata = {
 캐릭터 디바이스 드라이버 디렉토리에 있는 KConfig 파일을 열어서 menu 밑에 아래의 구문을 추가한다. 
 
 ```
+config MDS2450_SERVO
+	tristate "MDS2450_SERVO"
+	depends on MACH_MDS2450
+	default y
+	help
+	 MDS 2450 SERVO
+
 config MDS2450_MULTITAB_CONTROL
 	tristate "MDS2450_MULTITAB_CONTROL"
 	depends on MACH_MDS2450
@@ -559,6 +833,7 @@ obj-$(CONFIG_MDS2450_HELLO)	+= hello2.o
 obj-$(CONFIG_MDS2450_KSCAN)	+= mds2450_keyscan.o
 obj-$(CONFIG_MDS2450_BLINKY)	+= mds2450_blinky.o
 obj-$(CONFIG_MDS2450_TIMER)	+= timerTest_mod.o
+obj-$(CONFIG_MDS2450_SERVO)	+= mds2450_servo.o
 obj-$(CONFIG_MDS2450_MULTITAB_CONTROL)	+= mds2450_multitab_control.o
 obj-$(CONFIG_VIRTIO_CONSOLE)	+= virtio_console.o
 obj-$(CONFIG_RAW_DRIVER)	+= raw.o
@@ -580,6 +855,12 @@ obj-$(CONFIG_BFIN_OTP)		+= bfin-otp.o
 당연하겠지만 여기서 추가하는 오브젝트 파일은 캐릭터 디바이스 드라이버의 오브젝트 파일이다.
 
 위와 같이 추가하면 커널 루트 디렉토리에서 make menuconfig를 했을 때 위의 정보대로 캐릭터 디바이스 드라이버에 등록 된 것을 확인 할 수 있다. 
+
+make menuconfig를 하고 EXITfmf 하면 아무것도 바꾸지 않았는데에도 변동상황을 저장 하라고 한다.
+
+여기서는 그 이유를 모르겠지만
+
+make menuconfig를 해주지 않고 make zImage를 할 때에 Y/M/N 중에 선택을 하는 것에서 왜 해주어야 하는지 알 수 있다.
 
 
 ## 리눅스 C 애플리케이션 작성
@@ -817,9 +1098,11 @@ int  tcp_listen(int host, int port, int backlog) {
 
 
 #include "queue.h"                                          // 큐 자료구조
+#include "list.c"
 
 // 매크로
 #define MDS2450_MULTITAB_CONTROL_MAJOR 71                   // 디바이스 드라이버 메이저 넘버
+#define MDS2450_SERVO   74
 
 #define TCP_PORT 5555                                       // 소켓통신 포트
 #define MAXLINE 1000                                        // 소켓으로 한번에 받을 수 있는 데이터 길이
@@ -836,24 +1119,33 @@ void errquit(char *mesg);
 
 void *thread_function(void *arg);                           // 쓰레드 함수
 
-void Print_Queue(Queue *q);                                 // 큐 내용 출력 함수
+void *servo_function(void *arg);   			    // 서보 제어 하기 위한 쓰레드 함수
+
+void Print_Queue(List *list);                                 // 큐 내용 출력 함수
 
 int getCmdLine(char *file, char *buf); 
 
-
+  int servo_fd;
 
 // 메인 함수
 int main(int argc, char **argv)
 {
-   Queue q;                                                 // 음악을 저장 할 큐
+ 
+   List list;                                               // 음악목록을 저장할 linked list                                   
+   ListElmt *element;                   //  list 의 element 선언 및 동적 할당                        
+   element = (ListElmt *)malloc(sizeof(ListElmt));
+
 
    DIR *dir;                                                // 디렉터리를 조회 할 디렉터리 구조체
    struct dirent *ent;                                      // 파일의 inode로 파일을 선택할 dirent 구조체
 
    int dev_fd;                                              // 핀 제어 디바이스 드라이버 파일 디스크립터
+
    char dev_path[32];                                       // 디바이스 드라이보 파일 패스
+   char dev_servo[32];
 
    pthread_t s_thread;                                      // aplay 명령을 실행 할 스레드
+   pthread_t servo_threadid;
 
    char bufmsg[MAXLINE];                                    // 수신 버퍼
    char sendbuf[MAXLINE];                                   // 송신 버퍼
@@ -863,9 +1155,13 @@ int main(int argc, char **argv)
    char command[2];                                         // LED 커맨드 저장 배열
 
    bool music_state = false;                                // 음악 재생 상태 플래그
+   bool servo_state = false;                        
    int aplaypid;                                            // aplay 프로세스 아이디
+   
 
-   QueueInit(&q);                                           // 큐 초기화
+   list_init(&list,free);               // list 초기화      
+
+   element=list.head;                   // element 를 list 의 헤드를 가리키게함.(리스트를 비울때 헤드부터 비우게 하기 위함)
 
    if (argc != 3)                         
    {
@@ -881,11 +1177,18 @@ int main(int argc, char **argv)
    maxfdp1 = s + 1;                                         // 소켓 디스크립터 카운트 추가
    FD_ZERO(&read_fds);                                      // read_fds를 초기화
 
-   sprintf(dev_path, "/dev/multitab_control");              
+   sprintf(dev_path, "/dev/multitab_control");   
+   sprintf(dev_servo,"/dev/servo");           
    mknod(dev_path, (S_IRWXU | S_IRWXG | S_IFCHR),
-         MKDEV(MDS2450_MULTITAB_CONTROL_MAJOR, 0));         // 디바이스 드라이버 초기화
+   MKDEV(MDS2450_MULTITAB_CONTROL_MAJOR, 0));         // 디바이스 드라이버 초기화
+
+   mknod(dev_servo, (S_IRWXU | S_IRWXG | S_IFCHR),	// servo 제어 디바이스 드라이버 초기화
+   MKDEV(MDS2450_SERVO, 0));  
+
 
    dev_fd = open(dev_path, O_RDWR);                         // 디바이스 드라이버 파일 디스크립터 열기
+   servo_fd=open(dev_servo,O_RDWR);
+
    if (0 > dev_fd)
       printf("Open fail!!\n");
 
@@ -924,8 +1227,16 @@ int main(int argc, char **argv)
             {
                printf("APP STARTED!!\n");                   
 
-               while (!IsEmpty(&q))                         // 기존의 큐에 데이터가 있으면 
-                  Dequeue(&q);                              // 기존의 데이터 전부 제거
+               // while (!IsEmpty(&q))                         // 기존의 큐에 데이터가 있으면 
+               //    Dequeue(&q);                              // 기존의 데이터 전부 제거
+
+               while((list_size(&list)!=0))            // 리스트가 비워 있지 않을시 리스트 비우기 
+                  {
+                     list_rem_next(&list,element,NULL);         // 리스트 비움작업
+                     element=element->next;            // 다음 노드
+
+                  }
+
 
                printf("QUEUE CLEARED!!\n");
 
@@ -937,10 +1248,14 @@ int main(int argc, char **argv)
                      // .wav로 끝나는 파일이면
                      if (strstr(ent->d_name, ".wav") - ent->d_name == strlen(ent->d_name) - 4)
                      {
-                        Enqueue(&q, ent->d_name);           // 큐에 파일명 추가
-                        printf("Equeue : %s\n", ent->d_name);
+                   //     Enqueue(&q, ent->d_name);           // 큐에 파일명 추가
+                        list_ins_next(&list,element,ent->d_name); // 재생목록을 list 에 insert 함.
+            
+                        printf("List in : %s\n", ent->d_name);
                      }
+
                   }
+                  //printf("listsize : %d",list_size(list)); 
                   closedir(dir);                            // 디렉토리 닫기
                }
                else
@@ -950,28 +1265,36 @@ int main(int argc, char **argv)
             }
             else if (!strcmp(bufmsg, "LIST\n"))             // 수신 버퍼의 데이터가 LIST\n이면
             {
-               Print_Queue(&q);                             // 큐 데이터 출력 함수 호출
+               Print_Queue(&list);                             // 리스트 데이터 출력 함수 호출
+       //        print_list(&list);
+
             }
             else if (strstr(bufmsg, "PLAY") - bufmsg == 0 && 
                      strlen(bufmsg) == 6)                   // 수신 버퍼의 데이터가 PLAY로 시작하면서 길이가 6이면 ex) PLAY0\n
             {
+
+               ListElmt *new_element;            // 새로운 element 선언 및 동적 할당
+               new_element = (ListElmt *)malloc(sizeof(ListElmt));
+               new_element= list.head;           // element 가 list 의 head를 가리키게 함.  
                int i = 0;
                int music_index = bufmsg[4] - 0x30;          // 선택한 음악의 큐에서의 인덱스 
                char music_command[BUFSIZ];                  // aplay를 실행하는 명령어 저장 배열
-
-               for (; i < q.size; i++)                      // 큐의 사이즈만큼 반복
+               char save[20];
+               for (; i < list_size(&list); i++)                      // 큐의 사이즈만큼 반복
                {
                   if (i == music_index)                     // 선택한 음악의 인덱스이면
                   {
-                     printf("PLAY : %s\n", Peek(&q));
-                     sprintf(music_command, "aplay Playlist/%s", Peek(&q));
+                     printf("PLAY : %s\n", (char*)new_element->data); // 해당 element의 data 값 즉, 해당 노드의 음악명을 print함
+                     sprintf(music_command, "aplay Playlist/%s", (char*)new_element->data); // music_command에 aplay Playlist/(음악명) 저장.
                      printf("%s\n", music_command);
 
                      // 쓰레드에서 aplay 실행 ==> 이렇게 하지 않으면 aplay 프로그램이 포그라운드로 실행되기 때문에 현 프로그램의 사용이 불가능 해진다. 
                      pthread_create(&s_thread, NULL, thread_function, (void *)music_command);
                   }
-                  Enqueue(&q, Dequeue(&q));                 // <== 이 부분 때문에 LinkedList로 바꿀까 생각 중
+                  new_element=new_element->next; // 인덱스가 다음 노드를 가리키게 하기 위해 element를 next로 옮겨서 가리키게함.
+
                }
+       //        free(new_element);
             }
             else if(!strcmp(bufmsg, "PAUSE\n"))             // 수신 버퍼의 데이터가 PAUSE\n이면
             {
@@ -1018,7 +1341,11 @@ int main(int argc, char **argv)
             else if(!strcmp(bufmsg, "NEW\n"))               // 수신 버퍼의 데이터가 NEW\n이면
             {
                dir = opendir("/proc");                      // /proc 디렉토리 불러오기
-                  
+                 struct stat fileStat;    
+                 int pid;        
+           music_state=false;
+             char tempPath[256];
+             char cmdLine[256];
                while ((ent = readdir(dir)) != NULL)         // 디렉토리의 파일이 없을 때 까지 읽기
                {                                         
                   lstat(ent->d_name, &fileStat);            // 파일의 상태 정보를 읽기
@@ -1042,6 +1369,25 @@ int main(int argc, char **argv)
 
                closedir(dir);                               // 디렉토리 닫기
             }
+            else if (!strcmp(bufmsg, "SERVO\n"))   		
+                {
+                     char state[10]; 			    // 쓰레드 전달하기 위한 string
+
+                     if(!servo_state)
+                     {
+                     sprintf(state,"yes") ;		    // yes 문자열 저장
+                     pthread_create(&servo_threadid, NULL, servo_function, (void *)state); // servo 스레드에 yes 라는 state 를 전달
+                     servo_state=true;			    // 90도 이동후 다시 -90 하기 위해 플래그
+                     }
+                     else
+                     {
+                           sprintf(state,"no") ;	    // no 문자열 저장
+                     pthread_create(&servo_threadid, NULL, servo_function,  (void *)state);   // servo 스레드에 yes 라는 state 를 전달   
+                        servo_state=false;
+                     }
+               }
+
+
          }
       }
       if (FD_ISSET(0, &read_fds))                           // stdin 파일 디스크립터가 열려있다면
@@ -1062,8 +1408,9 @@ int main(int argc, char **argv)
          }
       }
    }
-
+   free(element);
    close(dev_fd);                                           // 핀 제어 디바이스 드라이버 파일 디스크립터 닫기
+   close(servo_fd);                                        // servo device driver close
 
    return 0;
 }
@@ -1099,23 +1446,55 @@ void *thread_function(void *arg)
    system((char *)arg);                                     // 인자로 넘겨받은 문자열을 쉘에서 실행
 }
 
-void Print_Queue(Queue *q)
+void *servo_function(void *arg)   			    // 서보 제어하는 스레드.
+{
+      int i;
+      i=0;
+
+      if((strcmp((char *)arg,"yes"))==0)		    // 전달 받은 매개변수의 문자열이 yes 인 경우
+      { 
+      for(i=0;i<25;i++)					    // 서보모터가 90도 이동하는데 소요되는 시간(?)을 계산하여 반복문으로 90도 만큼 돌리기 위해 25 만큼 반복문
+      {
+             write(servo_fd,"1",1);			    // 서보 파일 디스크립터 1을 write 함. (+ 90도 )
+      }
+   }
+   else
+   {
+          for(i=0;i<25;i++)				     // 서보모터가 -90도 이동하는데 소요되는 시간(?)을 계산하여 반복문으로 90도 만큼 돌리기 위해 25 만큼 반복문
+      {
+             write(servo_fd,"0",1);			    // 서보 파일 디스크립터 0을 write 함. (- 90도 )
+      }
+   }
+
+}
+
+
+
+
+void Print_Queue(List *list)
 {
    int i = 0;
    char *list_buffer;                                       // 파일명을 임시로 저장할 문자열
+   ListElmt *new_element;                    // list 를 socket 통신으로 넘기기 위해 list element를 선언 하고 동적 할당.
+   new_element = (ListElmt *)malloc(sizeof(ListElmt));
+   new_element= list->head;                // new_element가 전달 받은 리스트의 헤드를 가리키게 함.
 
    printf("Music List : \n");
-   for (; i < q->size; i++)                                 // 큐의 크기 만큼 반복
+
+   for (; i < list_size(list); i++)                                 // 큐의 크기 만큼 반복
    {
-      list_buffer = (char *)malloc(strlen(Peek(q)) + 1);    // 큐에서 PEEK한 값의 크기 + 1 만큼 동적 할당 
-      sprintf(list_buffer, "%s\n", Peek(q));                // PEEK한 값에 개행 문자를 하나 붙여서  
+      list_buffer = (char *)malloc(strlen(new_element->data) + 1);    // data 에 저장된 음악 재생 string 길이보다 +1 하여 list buffer 동적 할당. 
+      sprintf(list_buffer, "%s\n",new_element->data);                // list_buffer에 재생명 copy  
+   
       if (send(s, list_buffer, strlen(list_buffer), 0) < 0) // 소켓으로 전송
          puts("Error : Write error on socket.");
 
-      printf("\t\t%s\n", Peek(q));
-      Enqueue(q, Dequeue(q));
+      printf("\t\t%s\n", new_element->data); 
+      //Enqueue(q, Dequeue(q));
+      new_element=new_element->next;             // 소켓으로 전송후 다음 재생목록을 가리킴
       free(list_buffer);                                    // 동적 할당 한 버퍼 메모리 해제
    }
+   free(new_element);
 }
 
 
