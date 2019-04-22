@@ -39,18 +39,20 @@ static int key_value = 0;
 
 static void servo_R90(){
 	gpio_set_value(S3C2410_GPG(15), 1);
-	mdelay(2);		// 2ms delay
+	mdelay(2);		
+	udelay(400);	// 2.4ms delay
 	gpio_set_value(S3C2410_GPG(15), 0);
-	mdelay(18);	// 18ms delay
+	mdelay(17);	
+	udelay(600);	// 17.6ms delay
 }
 
 static void servo_R0(){
 	gpio_set_value(S3C2410_GPG(15), 1);
 	mdelay(1);
-	udelay(500);	// 1.5ms delay
+	udelay(400);	// 1.4ms delay
 	gpio_set_value(S3C2410_GPG(15), 0);
 	mdelay(18);
-	udelay(500);	// 18.5ms delay
+	udelay(600);	// 18.6ms delay
 }
 
 static ssize_t mds2450_servo_write(struct file * filp, const char * buf, size_t count, loff_t * pos){
@@ -58,12 +60,16 @@ static ssize_t mds2450_servo_write(struct file * filp, const char * buf, size_t 
     data = kmalloc(count, GFP_KERNEL);
 
     copy_from_user(data, buf, count);
-    printk("%s\n", data);
+    printk("%c\n", data[0]);
     
-    if(data[0] - '0')
+    if(data[0] - '0'){
+    	printk("R90\n");
     	servo_R90();
-    else
+    }
+    else{
+    	printk("R0\n");
     	servo_R0();
+    }
     kfree(data);
     return count;
 }

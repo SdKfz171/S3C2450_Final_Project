@@ -15,7 +15,7 @@
         android:id="@+id/Button02"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="LED1 ON" />
+        android:text="SERVO" />
 
     <ListView
         android:id="@+id/Music_List"
@@ -45,15 +45,15 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="현재 재생중인 곡"
+            android:text="현재 재생중인 곡:     "
             android:textStyle="bold"
             android:layout_weight="0" />
 
         <TextView
             android:id="@+id/Now_Playing_Music"
             android:layout_width="wrap_content"
-            android:layout_height="25dp"
-            android:textSize="25dp"
+            android:layout_height="15dp"
+            android:textSize="15dp"
             android:scrollHorizontally="true"
             android:layout_weight="3" />
 
@@ -61,8 +61,12 @@
             android:id="@+id/Music_Button"
             android:layout_width="36dp"
             android:layout_height="36dp"
-            android:foreground="@android:drawable/ic_media_pause"
-            android:background="@android:color/transparent" />
+            android:background="@android:drawable/ic_media_play"
+            android:foreground="@android:drawable/ic_media_pause" />
+
+
+
+
 
     </LinearLayout>
 
