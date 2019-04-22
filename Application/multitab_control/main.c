@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 
    bool music_state = false;                                // 음악 재생 상태 플래그
    int aplaypid;                                            // aplay 프로세스 아이디
-   int flag=0;
+
 
    list_init(&list,free);               // list 초기화      
 
@@ -258,6 +258,7 @@ int main(int argc, char **argv)
                dir = opendir("/proc");                      // /proc 디렉토리 불러오기
                  struct stat fileStat;    
                  int pid;        
+           music_state=false;
              char tempPath[256];
              char cmdLine[256];
                while ((ent = readdir(dir)) != NULL)         // 디렉토리의 파일이 없을 때 까지 읽기
