@@ -122,6 +122,9 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                     output.println("PLAY" + position);
                     output.flush();     
 
+                    pause.setForeground(getDrawable(R.drawable.button_action2));
+                    flag=false;
+                    
                     Log.d("SOCKET", "Play Position " + selected_index);
 
                     BottomBar_Divider.setVisibility(View.VISIBLE);
