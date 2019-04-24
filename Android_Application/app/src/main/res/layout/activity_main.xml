@@ -9,7 +9,7 @@
         android:id="@+id/Button01"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="LED0 ON" />
+        android:text="MULTITAB ON" />
 
     <Button
         android:id="@+id/Button02"
@@ -17,6 +17,12 @@
         android:layout_height="wrap_content"
         android:text="SERVO" />
 
+    <Button
+        android:id="@+id/Button03"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="LED ON" />
+    
     <ListView
         android:id="@+id/Music_List"
         android:layout_width="match_parent"

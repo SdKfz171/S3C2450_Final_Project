@@ -56,9 +56,12 @@ public class MainActivity extends AppCompatActivity implements Runnable {
     Button btn;
     Button servo;
     Button pause;
+    Button btn3;
 
     boolean btn_on;
     boolean btn2_on;
+    boolean btn3_on;
+
     View BottomBar_Divider;
     LinearLayout BottomBar;
     TextView Music_Name;
@@ -145,10 +148,11 @@ public class MainActivity extends AppCompatActivity implements Runnable {
         btn = (Button) findViewById(R.id.Button01);
         servo = (Button) findViewById(R.id.Button02);
         pause = (Button) findViewById(R.id.Music_Button);
-
+        btn3 = (Button) findViewById(R.id.Button03);
 
         btn_on = false;
         btn2_on = false;
+        btn3_on = false;
 
 
         btn.setOnClickListener(new OnClickListener() {
@@ -157,10 +161,10 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                 try{
                     if(!btn_on){
                         output.println("C01");
-                        btn.setText("LED0 OFF");
+                        btn.setText("MULTITAB OFF");
                     } else {
                         output.println("C00");
-                        btn.setText("LED0 ON");
+                        btn.setText("MULTITAB ON");
                     }
                     output.flush();
 //                    btn_on = !btn_on;
@@ -217,7 +221,25 @@ public class MainActivity extends AppCompatActivity implements Runnable {
             }
         });
 //
+        btn3.setOnClickListener(new OnClickListener() {
 
+            public void onClick(View v) {
+                try{
+                    if(!btn3_on){
+                        output.println("C11");
+                        btn.setText("LED OFF");
+                    } else {
+                        output.println("C10");
+                        btn.setText("LED ON");
+                    }
+                    output.flush();
+//                    btn3_on = !btn3_on;
+                    Log.d("TEST", "Socket Sended!!");
+                }catch (Exception e){
+                    Toast.makeText(getApplicationContext(), "문자열 전송 실패", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     @Override
@@ -244,19 +266,19 @@ public class MainActivity extends AppCompatActivity implements Runnable {
 //                Toast.makeText(getApplicationContext(), ACK, Toast.LENGTH_SHORT).show();
                 switch (ACK) {
                     case "C00":
-                        btn.setText("LED0 ON");
+                        btn.setText("MULTITAB ON");
                         btn_on = false;
                         break;
                     case "C01":
-                        btn.setText("LED0 OFF");
+                        btn.setText("MULTITAB OFF");
                         btn_on = true;
                         break;
                     case "C10":
-                        servo.setText("LED1 ON");
+                        servo.setText("LED ON");
                         btn2_on = false;
                         break;
                     case "C11":
-                        servo.setText("LED1 OFF");
+                        servo.setText("LED OFF");
                         btn2_on = true;
                         break;
                     case "START":
