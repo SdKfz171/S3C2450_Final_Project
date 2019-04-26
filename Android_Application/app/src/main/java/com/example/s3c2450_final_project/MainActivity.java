@@ -181,11 +181,11 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                 try{
                     if(!btn2_on){
                         output.println("SERVO");
-                        servo.setText("SERVO -90");
+                        servo.setText("DOOR CLOSE");
                         btn2_on=true;
                     } else {
                         output.println("SERVO");
-                        servo.setText("SERVO +90");
+                        servo.setText("DOOR OPEN");
                         btn2_on=false;
                     }
                     output.flush();
@@ -227,10 +227,10 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                 try{
                     if(!btn3_on){
                         output.println("C11");
-                        btn.setText("LED OFF");
+                        btn3.setText("LED OFF");
                     } else {
                         output.println("C10");
-                        btn.setText("LED ON");
+                        btn3.setText("LED ON");
                     }
                     output.flush();
 //                    btn3_on = !btn3_on;
@@ -274,12 +274,12 @@ public class MainActivity extends AppCompatActivity implements Runnable {
                         btn_on = true;
                         break;
                     case "C10":
-                        servo.setText("LED ON");
-                        btn2_on = false;
+                        btn3.setText("LED ON");
+                        btn3_on = false;
                         break;
                     case "C11":
-                        servo.setText("LED OFF");
-                        btn2_on = true;
+                        btn3.setText("LED OFF");
+                        btn3_on = true;
                         break;
                     case "START":
                         output.println("LIST");
