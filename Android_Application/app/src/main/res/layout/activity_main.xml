@@ -15,14 +15,14 @@
         android:id="@+id/Button02"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="SERVO" />
+        android:text="DOOR" />
 
     <Button
         android:id="@+id/Button03"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="LED ON" />
-    
+
     <ListView
         android:id="@+id/Music_List"
         android:layout_width="match_parent"
@@ -69,8 +69,6 @@
             android:layout_height="36dp"
             android:background="@android:drawable/ic_media_play"
             android:foreground="@android:drawable/ic_media_pause" />
-
-
 
 
 
