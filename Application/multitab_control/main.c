@@ -42,7 +42,7 @@ void errquit(char *mesg);
 
 void *thread_function(void *arg);                           // 쓰레드 함수
 
-void *servo_function(void *arg);   			    // 서보 제어 하기 위한 쓰레드 함수
+void *servo_function(void *arg);              // 서보 제어 하기 위한 쓰레드 함수
 
 void Print_Queue(List *list);                                 // 큐 내용 출력 함수
 
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
    mknod(dev_path, (S_IRWXU | S_IRWXG | S_IFCHR),
    MKDEV(MDS2450_MULTITAB_CONTROL_MAJOR, 0));         // 디바이스 드라이버 초기화
 
-   mknod(dev_servo, (S_IRWXU | S_IRWXG | S_IFCHR),	// servo 제어 디바이스 드라이버 초기화
+   mknod(dev_servo, (S_IRWXU | S_IRWXG | S_IFCHR), // servo 제어 디바이스 드라이버 초기화
    MKDEV(MDS2450_SERVO, 0));  
 
 
@@ -292,19 +292,19 @@ int main(int argc, char **argv)
 
                closedir(dir);                               // 디렉토리 닫기
             }
-            else if (!strcmp(bufmsg, "SERVO\n"))   		
+            else if (!strcmp(bufmsg, "SERVO\n"))         
                 {
-                     char state[10]; 			    // 쓰레드 전달하기 위한 string
+                     char state[10];             // 쓰레드 전달하기 위한 string
 
                      if(!servo_state)
                      {
-                     sprintf(state,"yes") ;		    // yes 문자열 저장
+                     sprintf(state,"yes") ;         // yes 문자열 저장
                      pthread_create(&servo_threadid, NULL, servo_function, (void *)state); // servo 스레드에 yes 라는 state 를 전달
-                     servo_state=true;			    // 90도 이동후 다시 -90 하기 위해 플래그
+                     servo_state=true;           // 90도 이동후 다시 -90 하기 위해 플래그
                      }
                      else
                      {
-                           sprintf(state,"no") ;	    // no 문자열 저장
+                           sprintf(state,"no") ;       // no 문자열 저장
                      pthread_create(&servo_threadid, NULL, servo_function,  (void *)state);   // servo 스레드에 yes 라는 state 를 전달   
                         servo_state=false;
                      }
@@ -369,23 +369,23 @@ void *thread_function(void *arg)
    system((char *)arg);                                     // 인자로 넘겨받은 문자열을 쉘에서 실행
 }
 
-void *servo_function(void *arg)   			    // 서보 제어하는 스레드.
+void *servo_function(void *arg)               // 서보 제어하는 스레드.
 {
       int i;
       i=0;
 
-      if((strcmp((char *)arg,"yes"))==0)		    // 전달 받은 매개변수의 문자열이 yes 인 경우
+      if((strcmp((char *)arg,"yes"))==0)         // 전달 받은 매개변수의 문자열이 yes 인 경우
       { 
-      for(i=0;i<25;i++)					    // 서보모터가 90도 이동하는데 소요되는 시간(?)을 계산하여 반복문으로 90도 만큼 돌리기 위해 25 만큼 반복문
+      for(i=0;i<25;i++)                 // 서보모터가 90도 이동하는데 소요되는 시간(?)을 계산하여 반복문으로 90도 만큼 돌리기 위해 25 만큼 반복문
       {
-             write(servo_fd,"1",1);			    // 서보 파일 디스크립터 1을 write 함. (+ 90도 )
+             write(servo_fd,"1",1);           // 서보 파일 디스크립터 1을 write 함. (+ 90도 )
       }
    }
    else
    {
-          for(i=0;i<25;i++)				     // 서보모터가 -90도 이동하는데 소요되는 시간(?)을 계산하여 반복문으로 90도 만큼 돌리기 위해 25 만큼 반복문
+          for(i=0;i<25;i++)                 // 서보모터가 -90도 이동하는데 소요되는 시간(?)을 계산하여 반복문으로 90도 만큼 돌리기 위해 25 만큼 반복문
       {
-             write(servo_fd,"0",1);			    // 서보 파일 디스크립터 0을 write 함. (- 90도 )
+             write(servo_fd,"0",1);           // 서보 파일 디스크립터 0을 write 함. (- 90도 )
       }
    }
 
